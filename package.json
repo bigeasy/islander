@@ -1,0 +1,43 @@
+{
+    "name":         "islander",
+    "version":      "9.9.9",
+    "description":  "Data structure for tracking a Multi-Paxos log.",
+    "author":       "Alan Gutierrez <alan@prettyrobots.com>",
+    "homepage":     "https://github.com/bigeasy/islander",
+    "bugs":         "https://github.com/bigeasy/islander/issues",
+    "keywords":
+    [
+                    "paxos", "database", "database", "network", "consensus",
+                    "atomic", "broadcast", "multi-paxos", "queue", "fifo"
+    ],
+    "contributors":
+    [
+        {
+                    "name":   "Demarius Chrite",
+                    "email":  "chrite.demarius@gmail.com",
+                    "web":    "https://github.com/demarius"
+        }
+    ],
+    "main":         "islander",
+    "dependencies":
+    {
+                    "bintrees":         "1.0.1",
+                    "happenstance":     "1.x",
+                    "monotonic":        "1.x",
+                    "signal":           "1.x"
+    },
+    "devDependencies":
+    {
+                    "proof":            "1.x"
+    },
+    "scripts":
+    {
+                    "test": "proof platform win32 && proof test */*/*.t.js || t/test"
+    },
+    "license":      "MIT",
+    "repository":
+    {
+                    "type": "git",
+                    "url": "http://github.com/bigeasy/islander.git"
+    }
+}
