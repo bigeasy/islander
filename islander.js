@@ -1,7 +1,6 @@
 var assert = require('assert')
-var Monotonic = require('monotonic')
+var Monotonic = require('monotonic').asString
 var RBTree = require('bintrees').RBTree
-var Id = require('paxos/id')
 var unshift = [].unshift
 
 function Islander (id) {
@@ -12,7 +11,7 @@ function Islander (id) {
     this.sent = { ordered: [], indexed: {} }
     this.pending = { ordered: [], indexed: {} }
     this.length = 0
-    this.log = new RBTree(function (a, b) { return Id.compare(a.promise, b.promise) })
+    this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
 }
 
 Islander.prototype.publish = function (value, internal) {
@@ -24,7 +23,7 @@ Islander.prototype.publish = function (value, internal) {
 }
 
 Islander.prototype.nextCookie = function () {
-    return this.cookie = Id.increment(this.cookie, 1)
+    return this.cookie = Monotonic.increment(this.cookie, 1)
 }
 
 Islander.prototype.outbox = function () {
@@ -94,10 +93,10 @@ Islander.prototype.playUniform = function (entries) {
         var request = this.sent.ordered[0] || { cookie: '/' }, boundary = this.boundary
         if (request.cookie == current.cookie) {
             assert(request.promise == null
-                || Id.compare(request.promise, current.promise) == 0, 'cookie/promise mismatch')
+                || request.promise == current.promise, 'cookie/promise mismatch')
             this.sent.ordered.shift()
         } else if (messagesLost.call(this)) {
-            if (Id.isGovernment(current.promise) && current.value && current.value.remap) {
+            if (Monotonic.isBoundary(current.promise, 0) && current.value && current.value.remap) {
                 if (this.boundary) {
                     var mapping = current.value.remap.filter(function (mapping) {
                         return this.boundary.promise == mapping.was
@@ -124,8 +123,8 @@ Islander.prototype.playUniform = function (entries) {
     }
 
     function messagesLost () {
-        return (boundary && Id.compare(current.promise, boundary.promise) >= 0) ||
-               (request.promise && Id.compare(current.promise, request.promise) > 0)
+        return (boundary && Monotonic.compare(current.promise, boundary.promise) >= 0) ||
+               (request.promise && Monotonic.compare(current.promise, request.promise) > 0)
     }
 
     return start
