@@ -22,10 +22,7 @@
     "dependencies":
     {
                     "bintrees":         "1.0.1",
-                    "happenstance":     "1.x",
-                    "monotonic":        "2.x",
-                    "paxos":            "3.x",
-                    "signal":           "1.x"
+                    "monotonic":        "2.x"
     },
     "devDependencies":
     {
