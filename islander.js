@@ -26,6 +26,8 @@ Islander.prototype.nextCookie = function () {
     return this.cookie = Monotonic.increment(this.cookie, 1)
 }
 
+// TODO Need to timeout flushes, make sure we're not hammering a broken
+// government.
 Islander.prototype.outbox = function () {
     var outbox = []
     if (this.flush) {
