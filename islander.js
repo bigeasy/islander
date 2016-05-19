@@ -7,7 +7,7 @@ function Islander (id) {
     this.id = id
     this.boundary = null
     this.flush = false
-    this.cookie = id + '/' + 0
+    this.cookie = '0'
     this.sent = { ordered: [], indexed: {} }
     this.pending = { ordered: [], indexed: {} }
     this.length = 0
@@ -23,7 +23,7 @@ Islander.prototype.publish = function (value, internal) {
 }
 
 Islander.prototype.nextCookie = function () {
-    return this.cookie = Monotonic.increment(this.cookie, 1)
+    return this.cookie = Monotonic.increment(this.cookie, 0)
 }
 
 // TODO Need to timeout flushes, make sure we're not hammering a broken
@@ -31,11 +31,11 @@ Islander.prototype.nextCookie = function () {
 Islander.prototype.outbox = function () {
     var outbox = []
     if (this.flush) {
-        outbox = [{ cookie: this.nextCookie(), value: 0 }]
+        outbox = [{ id: this.id, cookie: this.nextCookie(), value: 0 }]
     } else if (!this.boundary && this.sent.ordered.length == 0 && this.pending.ordered.length != 0) {
         this.sent = this.pending
         outbox = this.sent.ordered.map(function (request) {
-            return { cookie: request.cookie, value: request.value, internal: request.internal }
+            return { id: this.id, cookie: request.cookie, value: request.value, internal: request.internal }
         }, this)
         this.pending = { ordered: [], indexed: {} }
     }
@@ -92,8 +92,8 @@ Islander.prototype.playUniform = function (entries) {
         previous.next = current
         this.uniform = current.promise
         this.length++
-        var request = this.sent.ordered[0] || { cookie: '/' }, boundary = this.boundary
-        if (request.cookie == current.cookie) {
+        var request = this.sent.ordered[0] || { id: null, cookie: null }, boundary = this.boundary
+        if (this.id == current.id && request.cookie == current.cookie) {
             assert(request.promise == null
                 || request.promise == current.promise, 'cookie/promise mismatch')
             this.sent.ordered.shift()
