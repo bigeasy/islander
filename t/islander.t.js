@@ -1,7 +1,7 @@
 require('proof')(28, prove)
 
 function prove (assert) {
-    var Client = require('../../islander')
+    var Client = require('../islander')
 
     var islander = new Client('0')
 
