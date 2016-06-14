@@ -59,6 +59,8 @@ Islander.prototype.published = function (receipts) {
 }
 
 Islander.prototype.prime = function (entry) {
+    // TODO Create new object or sub-object instead of copy.
+    entry = JSON.parse(JSON.stringify(entry))
     this.uniform = entry.promise
     this.length = 1
     this.log.insert(entry)
@@ -136,7 +138,7 @@ Islander.prototype._ingest = function (entries) {
     entries.forEach(function (entry) {
         var found = this.log.find({ promise: entry.promise })
         if (!found) {
-            this.log.insert(entry)
+            this.log.insert(JSON.parse(JSON.stringify(entry)))
         }
     }, this)
 }
