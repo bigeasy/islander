@@ -1,39 +1,39 @@
 {
-    "name":             "islander",
-    "version":          "0.0.4",
-    "description":      "Data structure for tracking a Multi-Paxos log.",
-    "author":           "Alan Gutierrez <alan@prettyrobots.com>",
-    "homepage":         "https://github.com/bigeasy/islander",
-    "bugs":             "https://github.com/bigeasy/islander/issues",
+    "name":                 "islander",
+    "version":              "0.0.4",
+    "description":          "Data structure for tracking a Multi-Paxos log.",
+    "author":               "Alan Gutierrez <alan@prettyrobots.com>",
+    "homepage":             "https://github.com/bigeasy/islander",
+    "bugs":                 "https://github.com/bigeasy/islander/issues",
     "keywords":
     [
-                        "paxos", "database", "database", "network", "consensus",
-                        "atomic", "broadcast", "multi-paxos", "queue", "fifo"
+                            "paxos", "database", "database", "network", "consensus",
+                            "atomic", "broadcast", "multi-paxos", "queue", "fifo"
     ],
     "contributors":
     [{
-                        "name":   "Demarius Chrite",
-                        "email":  "chrite.demarius@gmail.com",
-                        "web":    "https://github.com/demarius"
+                            "name":   "Demarius Chrite",
+                            "email":  "chrite.demarius@gmail.com",
+                            "web":    "https://github.com/demarius"
     }],
-    "main":             "islander",
+    "main":                 "islander",
     "dependencies":
     {
-                        "bintrees":         "1.0.1",
-                        "monotonic":        "2.x"
+                            "bintrees":         "1.0.1",
+                            "monotonic":        "2.x"
     },
     "devDependencies":
     {
-                        "proof":            "1.x"
+                            "proof":            "1.x"
     },
     "scripts":
     {
-                        "test": "proof platform win32 && proof test */*/*.t.js || t/test"
+                            "test": "proof platform win32 && proof test */*/*.t.js || t/test"
     },
-    "license":          "MIT",
+    "license":              "MIT",
     "repository":
     {
-                        "type": "git",
-                        "url": "http://github.com/bigeasy/islander.git"
+                            "type": "git",
+                            "url": "http://github.com/bigeasy/islander.git"
     }
 }
