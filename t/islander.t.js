@@ -23,19 +23,20 @@ function prove (assert) {
         { id: 'x', cookie: '2', value: 2, internal: false }
     ], 'outbox is not empty')
 
+
     islander.published([
         { id: 'x', cookie: '1', promise: '1/3' },
         { id: 'x', cookie: '2', promise: '1/4' }
     ])
 
     islander.receive([
-        { id: 'x', cookie: '1', promise: '1/3', value: 2, previous: '1/2' },
+        { value: { id: 'x', cookie: '1', value: 2}, promise: '1/3', previous: '1/2' },
     ])
 
     islander.receive([
-        { id: '1', cookie: '1', promise: '1/2', value: 1, previous: '1/1' },
-        { id: 'x', cookie: '1', promise: '1/3', value: 2, previous: '1/2' },
-        { id: 'x', cookie: '2', promise: '1/4', value: 2, previous: '1/3' }
+        { value: { id: '1', cookie: '1', value: 1 }, promise: '1/2', previous: '1/1' },
+        { value: { id: 'x', cookie: '1', value: 2 }, promise: '1/3', previous: '1/2' },
+        { value: { id: 'x', cookie: '2', value: 2 }, promise: '1/4', previous: '1/3' }
     ])
 
     while (iterator.next) {
@@ -44,7 +45,7 @@ function prove (assert) {
     assert(iterator.promise, '1/4', 'filled')
 
     islander.receive([
-        { id: 'x', cookie: '2', promise: '1/4', value: 2, previous: '1/3' }
+        { value: { id: 'x', cookie: '2', value: 2 }, promise: '1/4', previous: '1/3' }
     ])
 
     assert(!iterator.next, 'duplicate')
@@ -69,17 +70,17 @@ function prove (assert) {
     islander.published([{ id: 'x', cookie: 'a', promise: '1/9' }])
     assert(islander.outbox(), [], 'boundary outbox published')
     islander.receive([
-        { id: 'x', cookie: '3', promise: '1/5', value: 1, previous: '1/4' },
-        { id: 'x', cookie: '4', promise: '1/6', value: 2, previous: '1/5' },
-        { id: 'x', cookie: '5', promise: '1/7', value: 3, previous: '1/6' },
-        { id: 'x', cookie: '9', promise: '1/8', value: 0, previous: '1/7' }
+        { value: { id: 'x', cookie: '3', value: 1 }, promise: '1/5', previous: '1/4' },
+        { value: { id: 'x', cookie: '4', value: 2 }, promise: '1/6', previous: '1/5' },
+        { value: { id: 'x', cookie: '5', value: 3 }, promise: '1/7', previous: '1/6' },
+        { value: { id: 'x', cookie: '9', value: 0 }, promise: '1/8', previous: '1/7' }
     ])
     assert(islander.outbox(), [], 'boundary outbox sent empty')
     assert(islander.sent.ordered, [], 'messages before boundary consumed')
     assert(islander.boundary != null, 'boundary exists')
     assert(islander.outbox(), [], 'boundary exists outbox')
     islander.receive([
-        { id: 'x', cookie: 'a', promise: '1/9', value: 0, previous: '1/8' },
+        { value: { id: 'x', cookie: 'a', value: 0 }, promise: '1/9', previous: '1/8' },
     ])
     assert(islander.boundary == null, 'boundary cleared')
     assert(islander.outbox(), [
@@ -96,9 +97,9 @@ function prove (assert) {
     islander.publish(8)
     islander.publish(9)
     islander.receive([
-        { id: 'x', cookie: '6', promise: '1/a', value: 1, previous: '1/9' },
-        { id: 'x', cookie: '7', promise: '1/b', value: 2, previous: '1/a' },
-        { id: 'x', cookie: '0', promise: '2/0', value: 0, previous: '1/b' },
+        { value: { id: 'x', cookie: '6', value: 1 }, promise: '1/a', previous: '1/9' },
+        { value: { id: 'x', cookie: '7', value: 2 }, promise: '1/b', previous: '1/a' },
+        { value: { id: 'x', cookie: '0', value: 0 }, promise: '2/0', previous: '1/b' },
     ])
     assert(islander.outbox(), [
         { id: 'x', cookie: '8', value: 6, internal: false },
@@ -112,9 +113,9 @@ function prove (assert) {
     ], 'third boundary')
     islander.published([{ id: 'x', promise: '2/5', cookie: 'f' }])
     islander.receive([
-        { id: 'x', cookie: '8', promise: '2/1', value: 6, previous: '2/0' },
-        { id: 'x', cookie: 'c', promise: '2/2', value: 7, previous: '2/1' },
-        { id: 'x', cookie: '0', promise: '3/0', value: 0, previous: '2/2',
+        { value: { id: 'x', cookie: '8', value: 6 }, promise: '2/1', previous: '2/0' },
+        { value: { id: 'x', cookie: 'c', value: 7 }, promise: '2/2', previous: '2/1' },
+        { promise: '3/0', previous: '2/2',
             value: {
                 remap: [
                     { was: '2/3', is: '3/1' },
@@ -125,9 +126,9 @@ function prove (assert) {
         }
     ])
     islander.receive([
-        { id: 'x', cookie: 'd', promise: '3/1', value: 8, previous: '3/0' },
-        { id: 'x', cookie: 'e', promise: '3/2', value: 9, previous: '3/1' },
-        { id: 'x', cookie: 'f', promise: '3/3', value: 0, previous: '3/2' }
+        { value: { id: 'x', cookie: 'd', value: 8 }, promise: '3/1', previous: '3/0' },
+        { value: { id: 'x', cookie: 'e', value: 9 }, promise: '3/2', previous: '3/1' },
+        { value: { id: 'x', cookie: 'f', value: 0 }, promise: '3/3', previous: '3/2' }
     ])
     assert(islander.boundary == null, 'third bounary consumed')
     islander.publish(1)
@@ -144,7 +145,7 @@ function prove (assert) {
         { id: 'x', cookie: '12', promise: '3/8' }
     ])
     islander.receive([
-        { id: 'x', cookie: '0', promise: '4/0', value: 0, previous: '3/3',
+        { promise: '4/0', previous: '3/3',
             value: {
                 remap: [
                     {  was: '3/5', is: '4/1' },
@@ -156,9 +157,9 @@ function prove (assert) {
         }
     ])
     islander.receive([
-        { id: '8', cookie: '10', promise: '4/1', value: 1, previous: '4/0' },
-        { id: 'x', cookie: '10', promise: '4/2', value: 1, previous: '4/1' },
-        { id: 'x', cookie: '0', promise: '5/0', value: 0, previous: '3/4',
+        { value: { id: '8', cookie: '10', value: 1 }, promise: '4/1', previous: '4/0' },
+        { value: { id: 'x', cookie: '10', value: 1 }, promise: '4/2', previous: '4/1' },
+        { promise: '5/0', previous: '3/4',
             value: {
                 remap: [
                     {  was: '4/2', is: '5/1' },
@@ -171,8 +172,8 @@ function prove (assert) {
     assert(islander.sent.ordered.length, 2, 'all remapped')
     assert(islander.outbox(), [], 'after remap, nothing to transmit')
     islander.receive([
-        { cookie: '0/11', promise: '5/1', value: 2, previous: '5/0' },
-        { cookie: '0/12', promise: '5/2', value: 3, previous: '5/1' }
+        { value: { cookie: '0/11', value: 2 }, promise: '5/1', previous: '5/0' },
+        { value: { cookie: '0/12', value: 3 }, promise: '5/2', previous: '5/1' }
     ])
     assert(islander.sent.ordered.length, 2, 'all consumed')
 }

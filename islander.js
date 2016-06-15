@@ -1,3 +1,4 @@
+// TODO Optionally surrender retries on collapse.
 var assert = require('assert')
 var Monotonic = require('monotonic').asString
 var RBTree = require('bintrees').RBTree
@@ -10,6 +11,7 @@ function Islander (id) {
     this.cookie = '0'
     this.sent = { ordered: [], indexed: {} }
     this.pending = { ordered: [], indexed: {} }
+    this.sending = false
     this.length = 0
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
 }
@@ -39,10 +41,12 @@ Islander.prototype.outbox = function () {
         }, this)
         this.pending = { ordered: [], indexed: {} }
     }
+    this.sending = outbox.length != 0
     return outbox
 }
 
 Islander.prototype.published = function (receipts) {
+    this.sending = false
     if (receipts.length === 0) {
         this.flush = true
     } else if (this.flush) {
@@ -56,6 +60,7 @@ Islander.prototype.published = function (receipts) {
         }, this)
     }
     delete this.sent.indexed
+    this.playUniform()
 }
 
 Islander.prototype.prime = function (entry) {
@@ -82,6 +87,10 @@ Islander.prototype.playUniform = function (entries) {
         previous, current,
         request
 
+    if (this.sending) {
+        return start
+    }
+
     for (;;) {
         previous = iterator.data(), current = iterator.next()
         if (!current) {
@@ -95,7 +104,7 @@ Islander.prototype.playUniform = function (entries) {
         this.uniform = current.promise
         this.length++
         var request = this.sent.ordered[0] || { id: null, cookie: null }, boundary = this.boundary
-        if (this.id == current.id && request.cookie == current.cookie) {
+        if (this.id == current.value.id && request.cookie == current.value.cookie) {
             assert(request.promise == null
                 || request.promise == current.promise, 'cookie/promise mismatch')
             this.sent.ordered.shift()
