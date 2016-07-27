@@ -17,8 +17,12 @@ function Islander (id) {
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
 }
 
+Islander.prototype._trace = function (method, vargs) {
+    logger.trace(method, { vargs: vargs })
+}
+
 Islander.prototype.publish = function (value, internal) {
-    logger.trace('publish', { vargs: [ value, internal ] })
+    this._trace('publish', [ value, internal ])
     var cookie = this.nextCookie()
     var request = { cookie: cookie, value: value, internal: !!internal }
     this.pending.ordered.push(request)
@@ -27,14 +31,14 @@ Islander.prototype.publish = function (value, internal) {
 }
 
 Islander.prototype.nextCookie = function () {
-    logger.trace('nextCookie', { vargs: [] })
+    this._trace('nextCookie', [])
     return this.cookie = Monotonic.increment(this.cookie, 0)
 }
 
 // TODO Need to timeout flushes, make sure we're not hammering a broken
 // government.
 Islander.prototype.outbox = function () {
-    logger.trace('outbox', { vargs: [] })
+    this._trace('outbox', [])
     var outbox = []
     if (this.flush) {
         outbox = [{ id: this.id, cookie: this.nextCookie(), value: 0 }]
@@ -50,7 +54,7 @@ Islander.prototype.outbox = function () {
 }
 
 Islander.prototype.published = function (receipts) {
-    logger.trace('published', { vargs: [ receipts ] })
+    this._trace('published', [ receipts ])
     this.sending = false
     if (receipts.length === 0) {
         this.flush = true
@@ -69,7 +73,7 @@ Islander.prototype.published = function (receipts) {
 }
 
 Islander.prototype.prime = function (entry) {
-    logger.trace('prime', { vargs: [ entry ] })
+    this._trace('prime', [ entry ])
     // TODO Create new object or sub-object instead of copy.
     entry = JSON.parse(JSON.stringify(entry))
     this.uniform = entry.promise
@@ -80,7 +84,7 @@ Islander.prototype.prime = function (entry) {
 }
 
 Islander.prototype.retry = function () {
-    logger.trace('retry', { vargs: [] })
+    this._trace('retry', [])
     unshift.apply(this.pending.ordered, this.sent.ordered)
     this.sent.ordered.forEach(function (request) {
         delete request.promise
@@ -90,7 +94,7 @@ Islander.prototype.retry = function () {
 }
 
 Islander.prototype.playUniform = function (entries) {
-    logger.trace('playUniform', { vargs: [ entries ] })
+    this._trace('playUniform', [ entries ])
     var start = this.uniform, iterator = this.log.findIter({ promise: start }),
         previous, current,
         request
@@ -152,7 +156,7 @@ Islander.prototype.playUniform = function (entries) {
 }
 
 Islander.prototype._ingest = function (entries) {
-    logger.trace('_ingest', { vargs: [ entries ] })
+    this._trace('_ingest', [ entries ])
     entries.forEach(function (entry) {
         var found = this.log.find({ promise: entry.promise })
         if (!found) {
@@ -162,7 +166,7 @@ Islander.prototype._ingest = function (entries) {
 }
 
 Islander.prototype.receive = function (entries) {
-    logger.trace('receive', { vargs: [ entries ] })
+    this._trace('receive', [ entries ])
     this._ingest(entries)
     return this.playUniform()
 }
