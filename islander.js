@@ -121,16 +121,16 @@ Islander.prototype.playUniform = function (entries) {
                 || request.promise == current.promise, 'cookie/promise mismatch')
             this.sent.ordered.shift()
         } else if (messagesLost.call(this)) {
-            if (Monotonic.isBoundary(current.promise, 0) && current.value && current.value.remap) {
+            if (Monotonic.isBoundary(current.promise, 0) && current.value && current.value.map) {
                 if (this.boundary) {
-                    var mapping = current.value.remap.filter(function (mapping) {
+                    var mapping = current.value.map.filter(function (mapping) {
                         return this.boundary.promise == mapping.was
                     }, this).shift()
                     assert(mapping, 'remap did not include posted boundary')
                     this.boundary.promise = mapping.is
                 } else {
                     var remapped = []
-                    current.value.remap.forEach(function (mapping) {
+                    current.value.map.forEach(function (mapping) {
                         if (this.sent.ordered.length && mapping.was == this.sent.ordered[0].promise) {
                             var request = this.sent.ordered.shift()
                             request.promise = mapping.is

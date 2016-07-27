@@ -117,7 +117,7 @@ function prove (assert) {
         { value: { id: 'x', cookie: 'c', value: 7 }, promise: '2/2', previous: '2/1' },
         { promise: '3/0', previous: '2/2',
             value: {
-                remap: [
+                map: [
                     { was: '2/3', is: '3/1' },
                     { was: '2/4', is: '3/2' },
                     { was: '2/5', is: '3/3' }
@@ -147,7 +147,7 @@ function prove (assert) {
     islander.receive([
         { promise: '4/0', previous: '3/3',
             value: {
-                remap: [
+                map: [
                     {  was: '3/5', is: '4/1' },
                     {  was: '3/6', is: '4/2' },
                     {  was: '3/7', is: '4/3' },
@@ -161,7 +161,7 @@ function prove (assert) {
         { value: { id: 'x', cookie: '10', value: 1 }, promise: '4/2', previous: '4/1' },
         { promise: '5/0', previous: '3/4',
             value: {
-                remap: [
+                map: [
                     {  was: '4/2', is: '5/1' },
                     {  was: '4/3', is: '5/2' },
                     {  was: '4/4', is: '5/3' }
