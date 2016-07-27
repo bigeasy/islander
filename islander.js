@@ -113,7 +113,6 @@ Islander.prototype.playUniform = function (entries) {
         this.length++
         var request = this.sent.ordered[0] || { id: null, cookie: null }, boundary = this.boundary
         if (this.id == current.value.id && request.cookie == current.value.cookie) {
-            console.log('>', request, current)
             assert(request.promise == null
                 || request.promise == current.promise, 'cookie/promise mismatch')
             this.sent.ordered.shift()
