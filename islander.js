@@ -39,6 +39,7 @@ Islander.prototype.nextCookie = function () {
 // government.
 Islander.prototype.outbox = function () {
     this._trace('outbox', [])
+    assert(!this.sending)
     var outbox = []
     if (this.flush) {
         outbox = [{ id: this.id, cookie: this.nextCookie(), value: 0 }]
