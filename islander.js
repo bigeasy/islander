@@ -3,6 +3,7 @@ var assert = require('assert')
 var Monotonic = require('monotonic').asString
 var RBTree = require('bintrees').RBTree
 var unshift = [].unshift
+var logger = require('prolific.logger').createLogger('bigeasy.islander')
 
 function Islander (id) {
     this.id = id
@@ -17,6 +18,7 @@ function Islander (id) {
 }
 
 Islander.prototype.publish = function (value, internal) {
+    logger.trace('publish', { vargs: [ value, internal ] })
     var cookie = this.nextCookie()
     var request = { cookie: cookie, value: value, internal: !!internal }
     this.pending.ordered.push(request)
@@ -25,12 +27,14 @@ Islander.prototype.publish = function (value, internal) {
 }
 
 Islander.prototype.nextCookie = function () {
+    logger.trace('nextCookie', { vargs: [] })
     return this.cookie = Monotonic.increment(this.cookie, 0)
 }
 
 // TODO Need to timeout flushes, make sure we're not hammering a broken
 // government.
 Islander.prototype.outbox = function () {
+    logger.trace('outbox', { vargs: [] })
     var outbox = []
     if (this.flush) {
         outbox = [{ id: this.id, cookie: this.nextCookie(), value: 0 }]
@@ -46,6 +50,7 @@ Islander.prototype.outbox = function () {
 }
 
 Islander.prototype.published = function (receipts) {
+    logger.trace('published', { vargs: [ receipts ] })
     this.sending = false
     if (receipts.length === 0) {
         this.flush = true
@@ -64,6 +69,7 @@ Islander.prototype.published = function (receipts) {
 }
 
 Islander.prototype.prime = function (entry) {
+    logger.trace('prime', { vargs: [ entry ] })
     // TODO Create new object or sub-object instead of copy.
     entry = JSON.parse(JSON.stringify(entry))
     this.uniform = entry.promise
@@ -74,6 +80,7 @@ Islander.prototype.prime = function (entry) {
 }
 
 Islander.prototype.retry = function () {
+    logger.trace('retry', { vargs: [] })
     unshift.apply(this.pending.ordered, this.sent.ordered)
     this.sent.ordered.forEach(function (request) {
         delete request.promise
@@ -83,6 +90,7 @@ Islander.prototype.retry = function () {
 }
 
 Islander.prototype.playUniform = function (entries) {
+    logger.trace('playUniform', { vargs: [ entries ] })
     var start = this.uniform, iterator = this.log.findIter({ promise: start }),
         previous, current,
         request
@@ -105,6 +113,7 @@ Islander.prototype.playUniform = function (entries) {
         this.length++
         var request = this.sent.ordered[0] || { id: null, cookie: null }, boundary = this.boundary
         if (this.id == current.value.id && request.cookie == current.value.cookie) {
+            console.log('>', request, current)
             assert(request.promise == null
                 || request.promise == current.promise, 'cookie/promise mismatch')
             this.sent.ordered.shift()
@@ -144,6 +153,7 @@ Islander.prototype.playUniform = function (entries) {
 }
 
 Islander.prototype._ingest = function (entries) {
+    logger.trace('_ingest', { vargs: [ entries ] })
     entries.forEach(function (entry) {
         var found = this.log.find({ promise: entry.promise })
         if (!found) {
@@ -153,6 +163,7 @@ Islander.prototype._ingest = function (entries) {
 }
 
 Islander.prototype.receive = function (entries) {
+    logger.trace('receive', { vargs: [ entries ] })
     this._ingest(entries)
     return this.playUniform()
 }

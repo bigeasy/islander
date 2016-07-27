@@ -20,7 +20,8 @@
     "dependencies":
     {
                             "bintrees":         "1.0.1",
-                            "monotonic":        "2.x"
+                            "monotonic":        "2.x",
+                            "prolific.logger":  "0.0.x"
     },
     "devDependencies":
     {
