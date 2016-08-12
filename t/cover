@@ -2,7 +2,7 @@
 
 set -e
 
-if [ ! -e node_module/bin/istanbul ]; then
+if [ ! -e node_module/.bin/istanbul ]; then
     cat << EOF 1>&2
 
 Istanbul is required to run coverage. Install Istanbul:
