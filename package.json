@@ -1,7 +1,10 @@
 {
     "name":                 "islander",
     "version":              "0.0.10",
-    "description":          "Data structure for tracking a Multi-Paxos log.",
+    "description":
+
+      "Data structure for tracking a Multi-Paxos log.",
+
     "author":               "Alan Gutierrez <alan@prettyrobots.com>",
     "homepage":             "https://github.com/bigeasy/islander",
     "bugs":                 "https://github.com/bigeasy/islander/issues",
@@ -19,13 +22,13 @@
     "main":                 "islander",
     "dependencies":
     {
-                            "bintrees":         "1.0.1",
-                            "monotonic":        "2.x",
-                            "prolific.logger":  "0.0.x"
+                            "bintrees":                     "1.0.1",
+                            "monotonic":                    "2.x",
+                            "prolific.logger":              "0.0.x"
     },
     "devDependencies":
     {
-                            "proof":            "1.x"
+                            "proof":                        "1.x"
     },
     "scripts":
     {
