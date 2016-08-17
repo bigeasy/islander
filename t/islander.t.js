@@ -1,4 +1,4 @@
-require('proof')(28, prove)
+require('proof/redux')(28, prove)
 
 function prove (assert) {
     var Client = require('../islander')
