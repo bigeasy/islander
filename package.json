@@ -29,7 +29,7 @@
     {
                             "bintrees":                     "1.0.1",
                             "monotonic":                    "2.0.x",
-                            "prolific.logger":              "0.0.x"
+                            "prolific.logger":              "1.0.x"
     },
     "devDependencies":
     {
