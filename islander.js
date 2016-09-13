@@ -18,7 +18,7 @@ function Islander (id) {
 }
 
 Islander.prototype._trace = function (method, vargs) {
-    logger.trace(method, { vargs: vargs })
+    logger.trace(method, { $vargs: vargs })
 }
 
 Islander.prototype.publish = function (value, internal) {
