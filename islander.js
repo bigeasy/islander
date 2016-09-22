@@ -3,7 +3,7 @@ var assert = require('assert')
 var Monotonic = require('monotonic').asString
 var RBTree = require('bintrees').RBTree
 var unshift = [].unshift
-var logger = require('prolific.logger').createLogger('bigeasy.islander')
+var logger = require('prolific.logger').createLogger('islander')
 
 function Islander (id) {
     this.id = id
