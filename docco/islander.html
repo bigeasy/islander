@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>islander.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, target-densitydpi=160dpi, initial-scale=1.0; maximum-scale=1.0; user-scalable=0;">
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div id="container">
+    <div id="background"></div>
+
+    <ul class="sections">
+
+          <li id="title">
+              <div class="annotation">
+                  <h1>islander.js</h1>
+              </div>
+          </li>
+
+
+
+        <li id="section-1">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-1">&#182;</a>
+              </div>
+              <p>TODO Optionally surrender retries on collapse.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">'assert'</span>)
+<span class="hljs-keyword">var</span> Monotonic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'monotonic'</span>).asString
+<span class="hljs-keyword">var</span> RBTree = <span class="hljs-built_in">require</span>(<span class="hljs-string">'bintrees'</span>).RBTree
+<span class="hljs-keyword">var</span> unshift = [].unshif
+<span class="hljs-keyword">var</span> logger = <span class="hljs-built_in">require</span>(<span class="hljs-string">'prolific.logger'</span>).createLogger(<span class="hljs-string">'islander'</span>)
+
+<span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">Islander</span> (<span class="hljs-params">id</span>) </span>{
+    <span class="hljs-keyword">this</span>.id = id
+    <span class="hljs-keyword">this</span>.boundary = <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">this</span>.flush = <span class="hljs-literal">false</span>
+    <span class="hljs-keyword">this</span>.cookie = <span class="hljs-string">'0'</span>
+    <span class="hljs-keyword">this</span>.sent = { <span class="hljs-attr">ordered</span>: [], <span class="hljs-attr">indexed</span>: {} }
+    <span class="hljs-keyword">this</span>.pending = { <span class="hljs-attr">ordered</span>: [], <span class="hljs-attr">indexed</span>: {} }
+    <span class="hljs-keyword">this</span>.sending = <span class="hljs-literal">false</span>
+    <span class="hljs-keyword">this</span>.length = <span class="hljs-number">0</span>
+    <span class="hljs-keyword">this</span>.log = <span class="hljs-keyword">new</span> RBTree(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">a, b</span>) </span>{ <span class="hljs-keyword">return</span> Monotonic.compare(a.promise, b.promise) })
+}
+
+Islander.prototype._trace = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">method, vargs</span>) </span>{
+    logger.trace(method, { <span class="hljs-attr">$vargs</span>: vargs })
+}
+
+Islander.prototype.publish = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">value, internal</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'publish'</span>, [ value, internal ])
+    <span class="hljs-keyword">var</span> cookie = <span class="hljs-keyword">this</span>.nextCookie()
+    <span class="hljs-keyword">var</span> request = { <span class="hljs-attr">cookie</span>: cookie, <span class="hljs-attr">value</span>: value, <span class="hljs-attr">internal</span>: !!internal }
+    <span class="hljs-keyword">this</span>.pending.ordered.push(request)
+    <span class="hljs-keyword">this</span>.pending.indexed[cookie] = reques
+    <span class="hljs-keyword">return</span> cookie
+}
+
+Islander.prototype.nextCookie = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'nextCookie'</span>, [])
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.cookie = Monotonic.increment(<span class="hljs-keyword">this</span>.cookie, <span class="hljs-number">0</span>)
+}
+
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-2">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>TODO Need to timeout flushes, make sure we’re not hammering a broken
+government.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Islander.prototype.outbox = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'outbox'</span>, [])
+    assert(!<span class="hljs-keyword">this</span>.sending)
+    <span class="hljs-keyword">var</span> outbox = []
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.flush) {
+        outbox = [{ <span class="hljs-attr">id</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">cookie</span>: <span class="hljs-keyword">this</span>.nextCookie(), <span class="hljs-attr">value</span>: <span class="hljs-number">0</span> }]
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.boundary &amp;&amp; <span class="hljs-keyword">this</span>.sent.ordered.length == <span class="hljs-number">0</span> &amp;&amp; <span class="hljs-keyword">this</span>.pending.ordered.length != <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">this</span>.sent = <span class="hljs-keyword">this</span>.pending
+        outbox = <span class="hljs-keyword">this</span>.sent.ordered.map(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">request</span>) </span>{
+            <span class="hljs-keyword">return</span> { <span class="hljs-attr">id</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">cookie</span>: request.cookie, <span class="hljs-attr">value</span>: request.value, <span class="hljs-attr">internal</span>: request.internal }
+        }, <span class="hljs-keyword">this</span>)
+        <span class="hljs-keyword">this</span>.pending = { <span class="hljs-attr">ordered</span>: [], <span class="hljs-attr">indexed</span>: {} }
+    }
+    <span class="hljs-keyword">this</span>.sending = outbox.length != <span class="hljs-number">0</span>
+    <span class="hljs-keyword">return</span> outbox
+}
+
+Islander.prototype.published = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">receipts</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'published'</span>, [ receipts ])
+    <span class="hljs-keyword">this</span>.sending = <span class="hljs-literal">false</span>
+    <span class="hljs-keyword">if</span> (receipts.length === <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">this</span>.flush = <span class="hljs-literal">true</span>
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.flush) {
+        assert(receipts.length == <span class="hljs-number">1</span>, <span class="hljs-string">'too many receipts'</span>)
+        <span class="hljs-keyword">this</span>.flush = <span class="hljs-literal">false</span>
+        <span class="hljs-keyword">this</span>.boundary = receipts[<span class="hljs-number">0</span>]
+    } <span class="hljs-keyword">else</span> {
+        receipts.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">receipt</span>) </span>{
+            assert(!<span class="hljs-keyword">this</span>.sent.indexed[receipt.cookie].promise, <span class="hljs-string">'duplicate receipt'</span>)
+            <span class="hljs-keyword">this</span>.sent.indexed[receipt.cookie].promise = receipt.promise
+        }, <span class="hljs-keyword">this</span>)
+    }
+    <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>.sent.indexed
+    <span class="hljs-keyword">this</span>.playUniform()
+}
+
+Islander.prototype.prime = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entry</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'prime'</span>, [ entry ])
+</pre></div></div>
+
+        </li>
+
+
+        <li id="section-3">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-3">&#182;</a>
+              </div>
+              <p>TODO Create new object or sub-object instead of copy.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    entry = <span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(entry))
+    <span class="hljs-keyword">this</span>.uniform = entry.promise
+    <span class="hljs-keyword">this</span>.length = <span class="hljs-number">1</span>
+    <span class="hljs-keyword">this</span>.log.insert(entry)
+    <span class="hljs-keyword">this</span>.log.min().uniform = <span class="hljs-literal">true</span>
+    <span class="hljs-keyword">return</span> entry
+}
+
+Islander.prototype.retry = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'retry'</span>, [])
+    unshift.apply(<span class="hljs-keyword">this</span>.pending.ordered, <span class="hljs-keyword">this</span>.sent.ordered)
+    <span class="hljs-keyword">this</span>.sent.ordered.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">request</span>) </span>{
+        <span class="hljs-keyword">delete</span> request.promise
+        <span class="hljs-keyword">this</span>.pending.indexed[request.cookie] = reques
+    }, <span class="hljs-keyword">this</span>)
+    <span class="hljs-keyword">this</span>.sent = { <span class="hljs-attr">ordered</span>: [], <span class="hljs-attr">indexed</span>: {} }
+}
+
+Islander.prototype.playUniform = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entries</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'playUniform'</span>, [ entries ])
+    <span class="hljs-keyword">var</span> start = <span class="hljs-keyword">this</span>.uniform, iterator = <span class="hljs-keyword">this</span>.log.findIter({ <span class="hljs-attr">promise</span>: start }),
+        previous, current,
+        reques
+
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.sending) {
+        <span class="hljs-keyword">return</span> star
+    }
+
+    <span class="hljs-keyword">for</span> (;;) {
+        previous = iterator.data(), current = iterator.next()
+        <span class="hljs-keyword">if</span> (!current) {
+            <span class="hljs-keyword">break</span>
+        }
+        current.uniform = current.previous == previous.promise
+        <span class="hljs-keyword">if</span> (!current.uniform) {
+            <span class="hljs-keyword">break</span>
+        }
+        previous.next = curren
+        <span class="hljs-keyword">this</span>.uniform = current.promise
+        <span class="hljs-keyword">this</span>.length++
+        <span class="hljs-keyword">var</span> request = <span class="hljs-keyword">this</span>.sent.ordered[<span class="hljs-number">0</span>] || { <span class="hljs-attr">id</span>: <span class="hljs-literal">null</span>, <span class="hljs-attr">cookie</span>: <span class="hljs-literal">null</span> }, boundary = <span class="hljs-keyword">this</span>.boundary
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.id == current.value.id &amp;&amp; request.cookie == current.value.cookie) {
+            assert(request.promise == <span class="hljs-literal">null</span>
+                || request.promise == current.promise, <span class="hljs-string">'cookie/promise mismatch'</span>)
+            <span class="hljs-keyword">this</span>.sent.ordered.shift()
+        } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (messagesLost.call(<span class="hljs-keyword">this</span>)) {
+            <span class="hljs-keyword">if</span> (Monotonic.isBoundary(current.promise, <span class="hljs-number">0</span>) &amp;&amp; current.value &amp;&amp; current.value.map) {
+                <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.boundary) {
+                    <span class="hljs-keyword">var</span> mapping = current.value.map.filter(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">mapping</span>) </span>{
+                        <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.boundary.promise == mapping.was
+                    }, <span class="hljs-keyword">this</span>).shift()
+                    assert(mapping, <span class="hljs-string">'remap did not include posted boundary'</span>)
+                    <span class="hljs-keyword">this</span>.boundary.promise = mapping.is
+                } <span class="hljs-keyword">else</span> {
+                    <span class="hljs-keyword">var</span> remapped = []
+                    current.value.map.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">mapping</span>) </span>{
+                        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.sent.ordered.length &amp;&amp; mapping.was == <span class="hljs-keyword">this</span>.sent.ordered[<span class="hljs-number">0</span>].promise) {
+                            <span class="hljs-keyword">var</span> request = <span class="hljs-keyword">this</span>.sent.ordered.shift()
+                            request.promise = mapping.is
+                            remapped.push(request)
+                        }
+                    }, <span class="hljs-keyword">this</span>)
+                    assert(<span class="hljs-keyword">this</span>.sent.ordered.length == <span class="hljs-number">0</span>, <span class="hljs-string">'remap did not remap all posted entries'</span>)
+                    <span class="hljs-keyword">this</span>.sent.ordered = remapped
+                }
+            } <span class="hljs-keyword">else</span> {
+                <span class="hljs-keyword">this</span>.retry()
+            }
+            <span class="hljs-keyword">delete</span> <span class="hljs-keyword">this</span>.boundary
+        }
+    }
+
+    <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">messagesLost</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">return</span> (boundary &amp;&amp; Monotonic.compare(current.promise, boundary.promise) &gt;= <span class="hljs-number">0</span>) ||
+               (request.promise &amp;&amp; Monotonic.compare(current.promise, request.promise) &gt; <span class="hljs-number">0</span>)
+    }
+
+    <span class="hljs-keyword">return</span> star
+}
+
+Islander.prototype._ingest = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entries</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'_ingest'</span>, [ entries ])
+    entries.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entry</span>) </span>{
+        <span class="hljs-keyword">var</span> found = <span class="hljs-keyword">this</span>.log.find({ <span class="hljs-attr">promise</span>: entry.promise })
+        <span class="hljs-keyword">if</span> (!found) {
+            <span class="hljs-keyword">this</span>.log.insert(<span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(entry)))
+        }
+    }, <span class="hljs-keyword">this</span>)
+}
+
+Islander.prototype.receive = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entries</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'receive'</span>, [ entries ])
+    <span class="hljs-keyword">this</span>._ingest(entries)
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.playUniform()
+}
+
+<span class="hljs-built_in">module</span>.exports = Islander
+
+</pre></div></div>
+
+        </li>
+
+    </ul>
+  </div>
+</body>
+</html>
