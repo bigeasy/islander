@@ -31,7 +31,8 @@
                             "bintrees":                     "1.0.1",
                             "monotonic":                    "2.0.x",
                             "procession":                   "0.0.4",
-                            "prolific.logger":              "2.0.x"
+                            "prolific.logger":              "2.0.x",
+                            "vestibule":                    "1.4.x"
     },
     "devDependencies":
     {

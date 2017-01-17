@@ -4,6 +4,7 @@ var Monotonic = require('monotonic').asString
 var RBTree = require('bintrees').RBTree
 var unshift = [].unshift
 var logger = require('prolific.logger').createLogger('islander')
+var Vestibiule = require('vestibule')
 
 function Islander (id) {
     this.id = id
@@ -14,6 +15,7 @@ function Islander (id) {
     this.pending = { ordered: [], indexed: {} }
     this.sending = false
     this.length = 0
+    this.outgoing = new Vestibiule
     this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
 }
 
@@ -26,6 +28,7 @@ Islander.prototype.publish = function (value, internal) {
     var cookie = this.nextCookie()
     var request = { cookie: cookie, value: value, internal: !!internal }
     this.pending.ordered.push(request)
+    this.outgoing.notify()
     this.pending.indexed[cookie] = request
     return cookie
 }
