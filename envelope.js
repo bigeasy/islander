@@ -1,10 +1,10 @@
-function Envelope (outbox, messages) {
-    this._outbox = outbox
+function Envelope (islander, messages) {
+    this._islander = islander
     this.messages = messages
 }
 
-Envelope.prototype.received = function (success) {
-    this._outbox._received.call(this._outbox, success, messages)
+Envelope.prototype.sent = function (response) {
+    this._islander._receipts(response)
 }
 
 module.exports = Envelope

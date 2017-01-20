@@ -1,22 +1,22 @@
 // TODO Optionally surrender retries on collapse.
 var assert = require('assert')
 var Monotonic = require('monotonic').asString
+var cadence = require('cadence')
+var Envelope = require('./envelope')
 var RBTree = require('bintrees').RBTree
 var unshift = [].unshift
 var logger = require('prolific.logger').createLogger('islander')
-var Vestibiule = require('vestibule')
+var Procession = require('procession')
 
 function Islander (id) {
     this.id = id
-    this.boundary = null
-    this.flush = false
-    this.cookie = '0'
-    this.sent = { ordered: [], indexed: {} }
-    this.pending = { ordered: [], indexed: {} }
-    this.sending = false
-    this.length = 0
-    this.outgoing = new Vestibiule
-    this.log = new RBTree(function (a, b) { return Monotonic.compare(a.promise, b.promise) })
+    this._cookie = '0'
+    this._governments = []
+    this._sent = []
+    this._pending = []
+    this.log = new Procession
+    this.log.push({ promise: '0/0' })
+    this.outbox = new Procession
 }
 
 Islander.prototype._trace = function (method, vargs) {
@@ -25,154 +25,237 @@ Islander.prototype._trace = function (method, vargs) {
 
 Islander.prototype.publish = function (value, internal) {
     this._trace('publish', [ value, internal ])
-    var cookie = this.nextCookie()
+    var cookie = this._nextCookie()
+    // TODO `internal` is dubious.
     var request = { cookie: cookie, value: value, internal: !!internal }
-    this.pending.ordered.push(request)
-    this.outgoing.notify()
-    this.pending.indexed[cookie] = request
+    this._pending.push({
+        id: this.id,
+        cookie: cookie,
+        value: value,
+        internal: !!internal
+    })
+    this._nudge()
     return cookie
 }
 
-Islander.prototype.nextCookie = function () {
-    this._trace('nextCookie', [])
-    return this.cookie = Monotonic.increment(this.cookie, 0)
+Islander.prototype._nudge = function () {
+    if (this._sent.length == 0 && this._pending.length != 0) {
+        this._send()
+    }
+}
+
+Islander.prototype._nextCookie = function () {
+    return this._cookie = Monotonic.increment(this._cookie, 0)
+}
+
+Islander.prototype._send = function () {
+    var envelope = new Envelope(this, this._pending)
+    this._sent.push({ messages: this._pending })
+    this._pending = []
+    this.outbox.push(envelope)
+}
+
+Islander.prototype._flush = function () {
+    var messages = [{ id: this.id, cookie: this._nextCookie() }]
+    var envelope = new Envelope(this, messages)
+    this._sent.push({ messages: messages })
+    this.outbox.push(envelope)
 }
 
 // TODO Need to timeout flushes, make sure we're not hammering a broken
 // government.
-Islander.prototype.outbox = function () {
-    this._trace('outbox', [])
-    assert(!this.sending)
-    var outbox = []
-    if (this.flush) {
-        outbox = [{ id: this.id, cookie: this.nextCookie(), value: 0 }]
-    } else if (!this.boundary && this.sent.ordered.length == 0 && this.pending.ordered.length != 0) {
-        this.sent = this.pending
-        outbox = this.sent.ordered.map(function (request) {
-            return { id: this.id, cookie: request.cookie, value: request.value, internal: request.internal }
-        }, this)
-        this.pending = { ordered: [], indexed: {} }
+
+// Called from the `Envelope` with receipts from a submission to the consensus
+// algorithm. Using the `receipts` we assign a promise to each of messages we
+// sent based on their cookie. If `receipts` is `null`, than the submission
+// failed for whatever reason. We also mark the submission completed.
+
+//
+Islander.prototype._receipts = function (receipts) {
+    this._trace('_sent', [ receipts ])
+    var last = this._sent[this._sent.length - 1]
+    if (!(last.failed = receipts == null)) {
+        last.messages.forEach(function (message) {
+            message.promise = receipts[message.cookie]
+        })
     }
-    this.sending = outbox.length != 0
-    return outbox
+    last.completed = true
+    this._remapIf()
 }
 
-Islander.prototype.published = function (receipts) {
-    this._trace('published', [ receipts ])
-    this.sending = false
-    if (receipts.length === 0) {
-        this.flush = true
-    } else if (this.flush) {
-        assert(receipts.length == 1, 'too many receipts')
-        this.flush = false
-        this.boundary = receipts[0]
-    } else {
-        receipts.forEach(function (receipt) {
-            assert(!this.sent.indexed[receipt.cookie].promise, 'duplicate receipt')
-            this.sent.indexed[receipt.cookie].promise = receipt.promise
-        }, this)
+// Possible race condition? I think so. The race is that we have two network
+// channels. Our object here does not control those channels. We have an outbox.
+// That outbox has a batch of messages to publish to the consensus algorithm. We
+// wait for those messages to obtain receipts that will match out cookies with
+// promises. We cannot process the atomic log without knowing the promises.
+//
+// It really ought not matter, since we could simply see our cookies coming
+// through the atomic log, so we could process the log while we're waiting.
+// However, we have this concept of remapping, where promises that are made by
+// one government are mapped to promises made by a new government, instead of
+// simply invalidating the promises of the previous government. We remap
+// promises on government changes when we can.
+//
+// Still doesn't quite matter since we're only ever looking for those cookies in
+// the atomic log. Remapping shouldn't matter. The only thing that matters is
+// that we detect when our messages have not made it into the consensus queue,
+// or have been lost to to a consensus collapse.
+//
+// Thus, we can imagine a way to process the atomic log looking for cookies when
+// we might not yet know their promises, shifting those entries, then mapping
+// promises to the cookies when they arrive. Upon mapping the promises to the
+// cookies we check to see if the promises are never going to be kept, then go
+// into our failure state, posting a boundary. Instead of promise based, the
+// boundary is cookie based. When we see the boundary we know to repost all of
+// our sent messages not yet seen in the atomic log.
+//
+// This leaves remapping. We need to gather up maps while promises are unknown.
+// We need to remap once they are. When we see maps, we can push them somewhere,
+// which will remap them if the first message has promise, or else wait. The
+// `sent` method can push an empty map, er, yeah, sure.
+//
+// We won't know if a change in government invalidates a promise until we have
+// all the maps, so we're going to trust the reamp method to invalidate.
+//
+// I suppose remapping tells us not to give up. If we see a government without a
+// remap, we're not going to know to give up until we get our promises. We know
+// something bad happened, but without the promises, we don't know if it
+// happened before or after our submission. Could just do the bounary anyway.
+//
+// Thus, bounaries need promises, otherwise we'll never know. The promises make
+// this definiative. During a health network round trip, we
+//
+// <hr>
+
+//
+Islander.prototype.push = function (entry) {
+    this._trace('push', [ entry ])
+
+    // User must provide items in order.
+    assert(this._previous == entry.previous || this._previous == null, 'out of order')
+
+    // Make note of the previous promise.
+    this._previous = entry.promise
+
+    // Whatever it is, we can forward it. This is not a filter nor a transform.
+    this.log.push(entry)
+
+    // Take note of whether or not we're a government.
+    var isGovernment = Monotonic.isBoundary(entry.promise, 0)
+
+    // Take note of a new government.
+    if (isGovernment) {
+        this._governments.push(entry)
     }
-    delete this.sent.indexed
-    this.playUniform()
-}
 
-Islander.prototype.prime = function (entry) {
-    this._trace('prime', [ entry ])
-    // TODO Create new object or sub-object instead of copy.
-    entry = JSON.parse(JSON.stringify(entry))
-    this.uniform = entry.promise
-    this.length = 1
-    this.log.insert(entry)
-    this.log.min().uniform = true
-    return entry
-}
+    // If this entry does pertains to us, look closer.
+    if (this.id == entry.value.id) {
+        // Get the next queued message to resolve, if any.
+        var next = this._sent.length ? this._sent[0].messages[0] : { cookie: null }
 
-Islander.prototype.retry = function () {
-    this._trace('retry', [])
-    unshift.apply(this.pending.ordered, this.sent.ordered)
-    this.sent.ordered.forEach(function (request) {
-        delete request.promise
-        this.pending.indexed[request.cookie] = request
-    }, this)
-    this.sent = { ordered: [], indexed: {} }
-}
-
-Islander.prototype.playUniform = function (entries) {
-    this._trace('playUniform', [ entries ])
-    var start = this.uniform, iterator = this.log.findIter({ promise: start }),
-        previous, current,
-        request
-
-    if (this.sending) {
-        return start
-    }
-
-    for (;;) {
-        previous = iterator.data(), current = iterator.next()
-        if (!current) {
-            break
-        }
-        current.uniform = current.previous == previous.promise
-        if (!current.uniform) {
-            break
-        }
-        previous.next = current
-        this.uniform = current.promise
-        this.length++
-        var request = this.sent.ordered[0] || { id: null, cookie: null }, boundary = this.boundary
-        if (this.id == current.value.id && request.cookie == current.value.cookie) {
-            assert(request.promise == null
-                || request.promise == current.promise, 'cookie/promise mismatch')
-            this.sent.ordered.shift()
-        } else if (messagesLost.call(this)) {
-            if (Monotonic.isBoundary(current.promise, 0) && current.value && current.value.map) {
-                if (this.boundary) {
-                    var mapping = current.value.map.filter(function (mapping) {
-                        return this.boundary.promise == mapping.was
-                    }, this).shift()
-                    assert(mapping, 'remap did not include posted boundary')
-                    this.boundary.promise = mapping.is
-                } else {
-                    var remapped = []
-                    current.value.map.forEach(function (mapping) {
-                        if (this.sent.ordered.length && mapping.was == this.sent.ordered[0].promise) {
-                            var request = this.sent.ordered.shift()
-                            request.promise = mapping.is
-                            remapped.push(request)
-                        }
-                    }, this)
-                    assert(this.sent.ordered.length == 0, 'remap did not remap all posted entries')
-                    this.sent.ordered = remapped
-                }
-            } else {
-                this.retry()
+        // Shift a message from our list of awaiting messages if we see it.
+        if (next.cookie = entry.value.cookie) {
+            this._sent[0].messages.shift()
+            // If we've consumed all the messages, maybe sent out another batch.
+            if (this._sent[0].messages.length == 0) {
+                this._complete()
             }
-            delete this.boundary
+        } else {
+            // If we see any boundary markers, then our sent messages are lost.
+            for (var i = 1, I = this.sent.length; i < I; i++) {
+                if (entry.value.cookie == this.sent[i].messages[0].cookie) {
+                    this._retry()
+                }
+            }
         }
     }
 
-    function messagesLost () {
-        return (boundary && Monotonic.compare(current.promise, boundary.promise) >= 0) ||
-               (request.promise && Monotonic.compare(current.promise, request.promise) > 0)
+    // Remap promises if we're not waiting on a send.
+    this._remapIf()
+}
+
+Islander.prototype._complete = function () {
+    this._sent.length = 0
+    this._nudge()
+}
+
+// If we have governments queued and we're scanning the atomic log for messages,
+// then we need to possibly map promises if they've been reassigned to the new
+// promises of a new government.
+// <hr>
+
+//
+Islander.prototype._remapIf = function () {
+    // No oustanding messages means governments don't matter.
+    if (this._sent.length == 0) {
+        this._governments.length = 0
     }
-
-    return start
+    // No governments means nothing to do.
+    if (this._governments.length == 0) {
+        return
+    }
+    // If we are not waiting on a post, work through the government changes.
+    if (this._sent.reduce(function (completed, sent) {
+       return compelted && sent.completed
+    }, true)) {
+        this._remap()
+    }
 }
 
-Islander.prototype._ingest = function (entries) {
-    this._trace('_ingest', [ entries ])
-    entries.forEach(function (entry) {
-        var found = this.log.find({ promise: entry.promise })
-        if (!found) {
-            this.log.insert(JSON.parse(JSON.stringify(entry)))
+// For each accumulated government, look for
+Islander.prototype._remap = function () {
+    var last = this._sent[this._sent.length - 1]
+    while (this._governments.length) {
+        var government = this._governments.shift()
+        var map = null
+        if (government.value.map != null) {
+            government.value.map.reduce(function (map, mapping) {
+                map[mapping.was] = mapping.is
+            }, map = {})
         }
-    }, this)
+        // TODO Assert invariant, all message promises are always in same government.
+        for (var i = 0, I = this._sent.length; i < I; i++) {
+            var sent = this._sent[i]
+            if (sent.failed) {
+                continue
+            }
+            if (map != null) {
+                sent.messages.forEach(function (message) {
+                    message.promise = map[message.promise]
+                })
+                assert(sent.messages.reduce(function (remapped, message) {
+                    return remapped && message.promise != null
+                }, true), 'remap did not remap all posted entries')
+            } else if (Monotonic.compare(sent[0].messages[0].promise, government.promise) < 0) {
+                sent.lost = true
+            }
+        }
+        if (this._sent.length == 1 && this._sent[0].lost) {
+            this._retry()
+            this._governments.length = 0
+        } else if (last.lost || last.failed) {
+            this._flush()
+            this._governments.length = 0
+        }
+    }
 }
 
-Islander.prototype.receive = function (entries) {
-    this._trace('receive', [ entries ])
-    this._ingest(entries)
-    return this.playUniform()
+Islander.prototype._retry = function () {
+    Array.prototype.unshift.apply(this._pending, this._sent[0].messages)
+    this._sent.length = 0
+    this._nudge()
+}
+
+Islander.prototype.enqueue = cadence(function (async, entry) {
+    this.push(entry)
+})
+
+Islander.prototype.health = function () {
+    return {
+        waiting: this._sent.length && this._sent[0].messages.length,
+        pending: this._pending.length,
+        boundaries: Math.max(this._sent.length - 1, 0)
+    }
 }
 
 module.exports = Islander

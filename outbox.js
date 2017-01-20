@@ -8,6 +8,7 @@ var Envelope = require('envelope')
 function Outbox (options) {
     this._outbound = new Vestibule
     this._received = options.received || unshift
+    this._procession = options.procession
     this._limit = options.limit || Infinity
 }
 
@@ -39,3 +40,5 @@ Outbox.prototype.dequeue = cadence(function (async) {
         this._outbound.enter(async())
     })()
 })
+
+module.exports = Outbox
