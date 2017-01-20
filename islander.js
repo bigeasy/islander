@@ -223,7 +223,9 @@ Islander.prototype._remap = function () {
             if (Monotonic.compare(government.promise, sent.messages[0].promise) < 0) {
                 continue
             }
-            if (map != null) {
+            if (map == null) {
+                sent.lost = true
+            } else {
                 sent.messages.forEach(function (message) {
                     message.promise = map[message.promise]
                 })
@@ -231,7 +233,6 @@ Islander.prototype._remap = function () {
                     return remapped && message.promise != null
                 }, true), 'remap did not remap all posted entries')
             }
-                sent.lost = true
         }
         if (this._sent.length == 1 && this._sent[0].lost) {
             this._retry()
