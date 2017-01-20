@@ -1,4 +1,4 @@
-require('proof/redux')(14, prove)
+require('proof/redux')(15, prove)
 
 // Test that a failed response will trigger a boundary.
 //
@@ -10,9 +10,9 @@ require('proof/redux')(14, prove)
 //
 // * That our submission was successful but a network error prevented us from
 // receiving a response.
-// * That our first boundary was successful but a network error prevented us
+// * That our first boundary was unsuccessful.
+// * That our second boundary was successful but a network error prevented us
 // from receiving a response.
-// * The second boundary was remapped.
 
 //
 function prove (assert) {
@@ -55,8 +55,13 @@ function prove (assert) {
     assert(envelope.messages, [{
         id: 'x', cookie: '5', value: null
     }], 'second boundary message')
-    envelope.sent({ '5': '3/2' })
-    assert(islander.health(), { waiting: 2, pending: 0, boundaries: 2 }, 'bound')
+    envelope.sent(null)
+    envelope = outbox.shift()
+    assert(envelope.messages, [{
+        id: 'x', cookie: '6', value: null
+    }], 'third boundary message')
+    envelope.sent({ '6': '3/2' })
+    assert(islander.health(), { waiting: 2, pending: 0, boundaries: 3 }, 'bound')
 
     // Successful first entry.
     islander.push({ value: { id: 'x', cookie: '2', value: 2 }, promise: '1/2', previous: '1/1' })
@@ -74,11 +79,11 @@ function prove (assert) {
         }
     })
     islander.push({
-        promise: '3/1', previous: '3/0', value: { id: 'x', cookie: '4', value: null }
+        promise: '3/1', previous: '3/0', value: { id: 'x', cookie: '5', value: null }
     })
     assert(islander.health(), { waiting: 1, pending: 0, boundaries: 0 }, 'flushed')
     islander.push({
-        promise: '3/2', previous: '3/1', value: { id: 'x', cookie: '5', value: null }
+        promise: '3/2', previous: '3/1', value: { id: 'x', cookie: '6', value: null }
     })
     assert(islander.health(), { waiting: 1, pending: 0, boundaries: 0 }, 'retry health')
 
