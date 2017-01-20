@@ -196,7 +196,7 @@ Islander.prototype._remapIf = function () {
     }
     // If we are not waiting on a post, work through the government changes.
     if (this._sent.reduce(function (completed, sent) {
-       return compelted && sent.completed
+       return completed && sent.completed
     }, true)) {
         this._remap()
     }
@@ -207,12 +207,7 @@ Islander.prototype._remap = function () {
     var last = this._sent[this._sent.length - 1]
     while (this._governments.length) {
         var government = this._governments.shift()
-        var map = null
-        if (government.value.map != null) {
-            government.value.map.reduce(function (map, mapping) {
-                map[mapping.was] = mapping.is
-            }, map = {})
-        }
+        var map = government.value.map
         // TODO Assert invariant, all message promises are always in same government.
         for (var i = 0, I = this._sent.length; i < I; i++) {
             var sent = this._sent[i]
