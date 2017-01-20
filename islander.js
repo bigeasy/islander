@@ -48,16 +48,18 @@ Islander.prototype._nextCookie = function () {
 }
 
 Islander.prototype._send = function () {
-    var envelope = new Envelope(this, this._pending)
-    this._sent.push({ messages: this._pending })
+    var cookie = this._pending[0].cookie
+    var envelope = new Envelope(this, cookie, this._pending)
+    this._sent.push({ cookie: cookie, messages: this._pending })
     this._pending = []
     this.outbox.push(envelope)
 }
 
 Islander.prototype._flush = function () {
-    var messages = [{ id: this.id, cookie: this._nextCookie(), value: null }]
-    var envelope = new Envelope(this, messages)
-    this._sent.push({ messages: messages })
+    var cookie = this._nextCookie()
+    var messages = [{ id: this.id, cookie: cookie, value: null }]
+    var envelope = new Envelope(this, cookie, messages)
+    this._sent.push({ cookie: cookie, messages: messages })
     this.outbox.push(envelope)
 }
 
@@ -70,9 +72,12 @@ Islander.prototype._flush = function () {
 // failed for whatever reason. We also mark the submission completed.
 
 //
-Islander.prototype._receipts = function (receipts) {
+Islander.prototype._receipts = function (cookie, receipts) {
     this._trace('_sent', [ receipts ])
     var last = this._sent[this._sent.length - 1]
+    if (last == null || last.cookie != cookie) {
+        return
+    }
     if (!(last.failed = receipts == null)) {
         last.messages.forEach(function (message) {
             message.promise = receipts[message.cookie]
