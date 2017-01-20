@@ -55,7 +55,7 @@ Islander.prototype._send = function () {
 }
 
 Islander.prototype._flush = function () {
-    var messages = [{ id: this.id, cookie: this._nextCookie() }]
+    var messages = [{ id: this.id, cookie: this._nextCookie(), value: null }]
     var envelope = new Envelope(this, messages)
     this._sent.push({ messages: messages })
     this.outbox.push(envelope)
@@ -153,7 +153,7 @@ Islander.prototype.push = function (entry) {
         var next = this._sent.length ? this._sent[0].messages[0] : { cookie: null }
 
         // Shift a message from our list of awaiting messages if we see it.
-        if (next.cookie = entry.value.cookie) {
+        if (next.cookie == entry.value.cookie) {
             this._sent[0].messages.shift()
             // If we've consumed all the messages, maybe sent out another batch.
             if (this._sent[0].messages.length == 0) {
@@ -161,9 +161,10 @@ Islander.prototype.push = function (entry) {
             }
         } else {
             // If we see any boundary markers, then our sent messages are lost.
-            for (var i = 1, I = this.sent.length; i < I; i++) {
-                if (entry.value.cookie == this.sent[i].messages[0].cookie) {
+            for (var i = 1, I = this._sent.length; i < I; i++) {
+                if (entry.value.cookie == this._sent[i].messages[0].cookie) {
                     this._retry()
+                    break
                 }
             }
         }
@@ -187,6 +188,9 @@ Islander.prototype._complete = function () {
 Islander.prototype._remapIf = function () {
     // No oustanding messages means governments don't matter.
     if (this._sent.length == 0) {
+        this._governments.length = 0
+    } else if (this._sent[this._sent.length - 1].failed) {
+        this._flush()
         this._governments.length = 0
     }
     // No governments means nothing to do.
@@ -213,6 +217,12 @@ Islander.prototype._remap = function () {
             if (sent.failed) {
                 continue
             }
+            if (sent.messages[0].promise == null) {
+                continue
+            }
+            if (Monotonic.compare(government.promise, sent.messages[0].promise) < 0) {
+                continue
+            }
             if (map != null) {
                 sent.messages.forEach(function (message) {
                     message.promise = map[message.promise]
@@ -220,14 +230,13 @@ Islander.prototype._remap = function () {
                 assert(sent.messages.reduce(function (remapped, message) {
                     return remapped && message.promise != null
                 }, true), 'remap did not remap all posted entries')
-            } else if (Monotonic.compare(sent[0].messages[0].promise, government.promise) < 0) {
-                sent.lost = true
             }
+                sent.lost = true
         }
         if (this._sent.length == 1 && this._sent[0].lost) {
             this._retry()
             this._governments.length = 0
-        } else if (last.lost || last.failed) {
+        } else if (last.lost) {
             this._flush()
             this._governments.length = 0
         }
