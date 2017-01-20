@@ -3,7 +3,6 @@ var assert = require('assert')
 var Monotonic = require('monotonic').asString
 var cadence = require('cadence')
 var Envelope = require('./envelope')
-var RBTree = require('bintrees').RBTree
 var unshift = [].unshift
 var logger = require('prolific.logger').createLogger('islander')
 var Procession = require('procession')
