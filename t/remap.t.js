@@ -16,7 +16,7 @@ function prove (assert) {
     envelope = outbox.shift()
     assert(envelope, 'outbox ready')
     assert(envelope.messages, [
-        { id: 'x', cookie: '1', value: 1, internal: false } // ,
+        { id: 'x', cookie: '1', value: 1 }
     ], 'outbox is not empty')
 
     envelope.sent({ '1': '1/1' })
@@ -25,9 +25,9 @@ function prove (assert) {
 
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '2', value: 2, internal: false
+        id: 'x', cookie: '2', value: 2
     }, {
-        id: 'x', cookie: '3', value: 3, internal: false
+        id: 'x', cookie: '3', value: 3
     }], 'multiple messages')
 
     envelope.sent({ '2': '1/2', '3': '1/3' })

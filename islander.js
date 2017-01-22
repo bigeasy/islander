@@ -22,17 +22,11 @@ Islander.prototype._trace = function (method, vargs) {
     logger.trace(method, { $vargs: vargs })
 }
 
-Islander.prototype.publish = function (value, internal) {
-    this._trace('publish', [ value, internal ])
+Islander.prototype.publish = function (value) {
+    this._trace('publish', [ value ])
     var cookie = this._nextCookie()
-    // TODO `internal` is dubious.
-    var request = { cookie: cookie, value: value, internal: !!internal }
-    this._pending.push({
-        id: this.id,
-        cookie: cookie,
-        value: value,
-        internal: !!internal
-    })
+    var request = { cookie: cookie, value: value }
+    this._pending.push({ id: this.id, cookie: cookie, value: value })
     this._nudge()
     return cookie
 }

@@ -37,7 +37,7 @@ function prove (assert) {
     envelope = outbox.shift()
     assert(envelope, 'outbox ready')
     assert(envelope.messages, [
-        { id: 'x', cookie: '1', value: 1, internal: false } // ,
+        { id: 'x', cookie: '1', value: 1 } // ,
     ], 'outbox is not empty')
 
     envelope.sent({ '1': '1/1' })
@@ -46,9 +46,9 @@ function prove (assert) {
 
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '2', value: 2, internal: false
+        id: 'x', cookie: '2', value: 2
     }, {
-        id: 'x', cookie: '3', value: 3, internal: false
+        id: 'x', cookie: '3', value: 3
     }], 'multiple messages')
 
     envelope.sent(null)
@@ -97,7 +97,7 @@ function prove (assert) {
     // boundary is even submitted to the consensus algorithm.
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '3', value: 3, internal: false
+        id: 'x', cookie: '3', value: 3
     }], 'retry messages')
     envelope.sent(null)
 
@@ -128,7 +128,7 @@ function prove (assert) {
     // Let's fail again.
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '8', value: 4, internal: false
+        id: 'x', cookie: '8', value: 4
     }], 'next batch messages')
     envelope.sent(null)
 
