@@ -20,17 +20,17 @@
             <div id="jump_page">
 
 
-                <a class="source" href="envelope.html">
+                <a class="source" href="envelope.js.html">
                   envelope.js
                 </a>
 
 
-                <a class="source" href="islander.html">
+                <a class="source" href="islander.js.html">
                   islander.js
                 </a>
 
 
-                <a class="source" href="outbox.html">
+                <a class="source" href="outbox.js.html">
                   outbox.js
                 </a>
 
@@ -82,31 +82,11 @@ Islander.prototype._trace = <span class="hljs-function"><span class="hljs-keywor
     logger.trace(method, { <span class="hljs-attr">$vargs</span>: vargs })
 }
 
-Islander.prototype.publish = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">value, internal</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'publish'</span>, [ value, internal ])
+Islander.prototype.publish = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">value</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'publish'</span>, [ value ])
     <span class="hljs-keyword">var</span> cookie = <span class="hljs-keyword">this</span>._nextCookie()
-</pre></div></div>
-
-        </li>
-
-
-        <li id="section-2">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-2">&#182;</a>
-              </div>
-              <p>TODO <code>internal</code> is dubious.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> request = { <span class="hljs-attr">cookie</span>: cookie, <span class="hljs-attr">value</span>: value, <span class="hljs-attr">internal</span>: !!internal }
-    <span class="hljs-keyword">this</span>._pending.push({
-        <span class="hljs-attr">id</span>: <span class="hljs-keyword">this</span>.id,
-        <span class="hljs-attr">cookie</span>: cookie,
-        <span class="hljs-attr">value</span>: value,
-        <span class="hljs-attr">internal</span>: !!internal
-    })
+    <span class="hljs-keyword">var</span> request = { <span class="hljs-attr">cookie</span>: cookie, <span class="hljs-attr">value</span>: value }
+    <span class="hljs-keyword">this</span>._pending.push({ <span class="hljs-attr">id</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">cookie</span>: cookie, <span class="hljs-attr">value</span>: value })
     <span class="hljs-keyword">this</span>._nudge()
     <span class="hljs-keyword">return</span> cookie
 }
@@ -142,11 +122,11 @@ Islander.prototype._flush = <span class="hljs-function"><span class="hljs-keywor
         </li>
 
 
-        <li id="section-3">
+        <li id="section-2">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-3">&#182;</a>
+                <a class="pilcrow" href="#section-2">&#182;</a>
               </div>
               <p>TODO Need to timeout flushes, make sure we’re not hammering a broken
 government.</p>
@@ -156,11 +136,11 @@ government.</p>
         </li>
 
 
-        <li id="section-4">
+        <li id="section-3">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-4">&#182;</a>
+                <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
               <p>Called from the <code>Envelope</code> with receipts from a submission to the consensus
 algorithm. Using the <code>receipts</code> we assign a promise to each of messages we
@@ -172,11 +152,11 @@ failed for whatever reason. We also mark the submission completed.</p>
         </li>
 
 
-        <li id="section-5">
+        <li id="section-4">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-5">&#182;</a>
+                <a class="pilcrow" href="#section-4">&#182;</a>
               </div>
 
             </div>
@@ -201,11 +181,11 @@ failed for whatever reason. We also mark the submission completed.</p>
         </li>
 
 
-        <li id="section-6">
+        <li id="section-5">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-6">&#182;</a>
+                <a class="pilcrow" href="#section-5">&#182;</a>
               </div>
               <p>Possible race condition? I think so. The race is that we have two network
 channels. Our object here does not control those channels. We have an outbox.
@@ -248,11 +228,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-7">
+        <li id="section-6">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-7">&#182;</a>
+                <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
 
             </div>
@@ -265,11 +245,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-8">
+        <li id="section-7">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-8">&#182;</a>
+                <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
               <p>User must provide items in order.</p>
 
@@ -282,11 +262,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-9">
+        <li id="section-8">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-9">&#182;</a>
+                <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
               <p>Make note of the previous promise.</p>
 
@@ -299,11 +279,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-10">
+        <li id="section-9">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-10">&#182;</a>
+                <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
               <p>Whatever it is, we can forward it. This is not a filter nor a transform.</p>
 
@@ -316,11 +296,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-11">
+        <li id="section-10">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-11">&#182;</a>
+                <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
               <p>Take note of whether or not we’re a government.</p>
 
@@ -333,11 +313,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-12">
+        <li id="section-11">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-12">&#182;</a>
+                <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
               <p>Take note of a new government.</p>
 
@@ -352,11 +332,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-13">
+        <li id="section-12">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-13">&#182;</a>
+                <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
               <p>If this entry does pertains to us, look closer.</p>
 
@@ -368,11 +348,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-14">
+        <li id="section-13">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-14">&#182;</a>
+                <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
               <p>Get the next queued message to resolve, if any.</p>
 
@@ -385,11 +365,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-15">
+        <li id="section-14">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-15">&#182;</a>
+                <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
               <p>Shift a message from our list of awaiting messages if we see it.</p>
 
@@ -402,11 +382,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-16">
+        <li id="section-15">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-16">&#182;</a>
+                <a class="pilcrow" href="#section-15">&#182;</a>
               </div>
               <p>If we’ve consumed all the messages, maybe sent out another batch.</p>
 
@@ -421,11 +401,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-17">
+        <li id="section-16">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-17">&#182;</a>
+                <a class="pilcrow" href="#section-16">&#182;</a>
               </div>
               <p>If we see any boundary markers, then our sent messages are lost.</p>
 
@@ -445,11 +425,11 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-18">
+        <li id="section-17">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-18">&#182;</a>
+                <a class="pilcrow" href="#section-17">&#182;</a>
               </div>
               <p>Remap promises if we’re not waiting on a send.</p>
 
@@ -468,11 +448,11 @@ Islander.prototype._complete = <span class="hljs-function"><span class="hljs-key
         </li>
 
 
-        <li id="section-19">
+        <li id="section-18">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-19">&#182;</a>
+                <a class="pilcrow" href="#section-18">&#182;</a>
               </div>
               <p>If we have governments queued and we’re scanning the atomic log for messages,
 then we need to possibly map promises if they’ve been reassigned to the new
@@ -484,11 +464,11 @@ promises of a new government.</p>
         </li>
 
 
-        <li id="section-20">
+        <li id="section-19">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-20">&#182;</a>
+                <a class="pilcrow" href="#section-19">&#182;</a>
               </div>
 
             </div>
@@ -499,11 +479,11 @@ promises of a new government.</p>
         </li>
 
 
-        <li id="section-21">
+        <li id="section-20">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-21">&#182;</a>
+                <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
               <p>No oustanding messages means governments don’t matter.</p>
 
@@ -520,11 +500,11 @@ promises of a new government.</p>
         </li>
 
 
-        <li id="section-22">
+        <li id="section-21">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-22">&#182;</a>
+                <a class="pilcrow" href="#section-21">&#182;</a>
               </div>
               <p>No governments means nothing to do.</p>
 
@@ -538,11 +518,11 @@ promises of a new government.</p>
         </li>
 
 
-        <li id="section-23">
+        <li id="section-22">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-23">&#182;</a>
+                <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
               <p>If we are not waiting on a post, work through the government changes.</p>
 
@@ -560,11 +540,11 @@ promises of a new government.</p>
         </li>
 
 
-        <li id="section-24">
+        <li id="section-23">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-24">&#182;</a>
+                <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
               <p>For each accumulated government, look for</p>
 
@@ -580,11 +560,11 @@ promises of a new government.</p>
         </li>
 
 
-        <li id="section-25">
+        <li id="section-24">
             <div class="annotation">
 
               <div class="pilwrap ">
-                <a class="pilcrow" href="#section-25">&#182;</a>
+                <a class="pilcrow" href="#section-24">&#182;</a>
               </div>
               <p>TODO Assert invariant, all message promises are always in same government.</p>
 
