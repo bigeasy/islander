@@ -2,7 +2,6 @@
 var assert = require('assert')
 var Monotonic = require('monotonic').asString
 var cadence = require('cadence')
-var Envelope = require('./envelope')
 var unshift = [].unshift
 var logger = require('prolific.logger').createLogger('islander')
 var Procession = require('procession')
@@ -43,7 +42,10 @@ Islander.prototype._nextCookie = function () {
 
 Islander.prototype._send = function () {
     var cookie = this._pending[0].cookie
-    var envelope = new Envelope(this, cookie, this._pending)
+    var envelope = {
+        cookie: cookie,
+        messages: this._pending.slice()
+    }
     this._sent.push({ cookie: cookie, messages: this._pending })
     this._pending = []
     this.outbox.push(envelope)
@@ -52,7 +54,7 @@ Islander.prototype._send = function () {
 Islander.prototype._flush = function () {
     var cookie = this._nextCookie()
     var messages = [{ id: this.id, cookie: cookie, value: null }]
-    var envelope = new Envelope(this, cookie, messages)
+    var envelope = { cookie: cookie, messages: messages }
     this._sent.push({ cookie: cookie, messages: messages })
     this.outbox.push(envelope)
 }
@@ -60,14 +62,14 @@ Islander.prototype._flush = function () {
 // TODO Need to timeout flushes, make sure we're not hammering a broken
 // government.
 
-// Called from the `Envelope` with receipts from a submission to the consensus
+// Called from the envelope with receipts from a submission to the consensus
 // algorithm. Using the `receipts` we assign a promise to each of messages we
 // sent based on their cookie. If `receipts` is `null`, than the submission
 // failed for whatever reason. We also mark the submission completed.
 
 //
-Islander.prototype._receipts = function (cookie, receipts) {
-    this._trace('_sent', [ receipts ])
+Islander.prototype.receipts = function (cookie, receipts) {
+    this._trace('receipts', [ receipts ])
     var last = this._sent[this._sent.length - 1]
     if (last == null || last.cookie != cookie) {
         return
