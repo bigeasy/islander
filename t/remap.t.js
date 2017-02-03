@@ -4,8 +4,8 @@ function prove (assert) {
     var Islander = require('../islander')
 
     var islander = new Islander('x')
-    var outbox = islander.outbox.consumer()
-    var consumer = islander.log.consumer()
+    var outbox = islander.outbox.shifter()
+    var shifter = islander.log.shifter()
     var envelope
 
     assert(islander.publish(1), '1', 'cookie')
@@ -13,7 +13,7 @@ function prove (assert) {
     assert(islander.publish(3), '3', 'third cookie')
     assert(islander.health(), { waiting: 1, pending: 2, boundaries: 0 }, 'sent')
 
-    envelope = outbox.shift()
+    envelope = outbox.shift().body
     assert(envelope, 'outbox ready')
     assert(envelope.messages, [
         { id: 'x', cookie: '1', body: 1 }
@@ -23,7 +23,7 @@ function prove (assert) {
 
     islander.push({ body: { id: 'x', cookie: '1', body: 1 }, promise: '1/1', previous: '1/0' })
 
-    envelope = outbox.shift()
+    envelope = outbox.shift().body
     assert(envelope.messages, [{
         id: 'x', cookie: '2', body: 2
     }, {
@@ -41,7 +41,7 @@ function prove (assert) {
     })
     islander.push({ body: { id: 'x', cookie: '3', body: 3 }, promise: '2/1', previous: '2/0' })
     assert(islander.health(), { waiting: 0, pending: 0, boundaries: 0 }, 'remapped')
-    assert([ consumer.shift(), consumer.shift(), consumer.shift(), consumer.shift() ], [{
+    assert([ shifter.shift().body, shifter.shift().body, shifter.shift().body, shifter.shift().body ], [{
         body: { id: 'x', cookie: '1', body: 1 }, promise: '1/1', previous: '1/0'
     }, {
         body: { id: 'x', cookie: '2', body: 2 }, promise: '1/2', previous: '1/1'
