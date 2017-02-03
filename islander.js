@@ -21,11 +21,11 @@ Islander.prototype._trace = function (method, vargs) {
     logger.trace(method, { $vargs: vargs })
 }
 
-Islander.prototype.publish = function (value) {
-    this._trace('publish', [ value ])
+Islander.prototype.publish = function (body) {
+    this._trace('publish', [ body ])
     var cookie = this._nextCookie()
-    var request = { cookie: cookie, value: value }
-    this._pending.push({ id: this.id, cookie: cookie, value: value })
+    var request = { cookie: cookie, body: body }
+    this._pending.push({ id: this.id, cookie: cookie, body: body })
     this._nudge()
     return cookie
 }
@@ -53,7 +53,7 @@ Islander.prototype._send = function () {
 
 Islander.prototype._flush = function () {
     var cookie = this._nextCookie()
-    var messages = [{ id: this.id, cookie: cookie, value: null }]
+    var messages = [{ id: this.id, cookie: cookie, body: null }]
     var envelope = { cookie: cookie, messages: messages }
     this._sent.push({ cookie: cookie, messages: messages })
     this.outbox.push(envelope)
@@ -149,12 +149,12 @@ Islander.prototype.push = function (entry) {
     }
 
     // If this entry does pertains to us, look closer.
-    if (this.id == entry.value.id) {
+    if (this.id == entry.body.id) {
         // Get the next queued message to resolve, if any.
         var next = this._sent.length ? this._sent[0].messages[0] : { cookie: null }
 
         // Shift a message from our list of awaiting messages if we see it.
-        if (next.cookie == entry.value.cookie) {
+        if (next.cookie == entry.body.cookie) {
             this._sent[0].messages.shift()
             // If we've consumed all the messages, maybe sent out another batch.
             if (this._sent[0].messages.length == 0) {
@@ -163,7 +163,7 @@ Islander.prototype.push = function (entry) {
         } else {
             // If we see any boundary markers, then our sent messages are lost.
             for (var i = 1, I = this._sent.length; i < I; i++) {
-                if (entry.value.cookie == this._sent[i].messages[0].cookie) {
+                if (entry.body.cookie == this._sent[i].messages[0].cookie) {
                     this._retry()
                     break
                 }
@@ -211,7 +211,7 @@ Islander.prototype._remap = function () {
     var last = this._sent[this._sent.length - 1]
     while (this._governments.length) {
         var government = this._governments.shift()
-        var map = government.value.map
+        var map = government.body.map
         // TODO Assert invariant, all message promises are always in same government.
         for (var i = 0, I = this._sent.length; i < I; i++) {
             var sent = this._sent[i]

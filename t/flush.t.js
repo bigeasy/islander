@@ -37,59 +37,59 @@ function prove (assert) {
     envelope = outbox.shift()
     assert(envelope, 'outbox ready')
     assert(envelope.messages, [
-        { id: 'x', cookie: '1', value: 1 } // ,
+        { id: 'x', cookie: '1', body: 1 } // ,
     ], 'outbox is not empty')
 
     islander.receipts(envelope.cookie, { '1': '1/1' })
 
-    islander.push({ value: { id: 'x', cookie: '1', value: 1 }, promise: '1/1', previous: '1/0' })
+    islander.push({ body: { id: 'x', cookie: '1', body: 1 }, promise: '1/1', previous: '1/0' })
 
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '2', value: 2
+        id: 'x', cookie: '2', body: 2
     }, {
-        id: 'x', cookie: '3', value: 3
+        id: 'x', cookie: '3', body: 3
     }], 'multiple messages')
 
     islander.receipts(envelope.cookie, null)
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '4', value: null
+        id: 'x', cookie: '4', body: null
     }], 'first boundary messages')
     islander.receipts(envelope.cookie, null)
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '5', value: null
+        id: 'x', cookie: '5', body: null
     }], 'second boundary message')
     islander.receipts(envelope.cookie, null)
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '6', value: null
+        id: 'x', cookie: '6', body: null
     }], 'third boundary message')
     islander.receipts(envelope.cookie, { '6': '3/2' })
     assert(islander.health(), { waiting: 2, pending: 0, boundaries: 3 }, 'bound')
 
     // Successful first entry.
-    islander.push({ value: { id: 'x', cookie: '2', value: 2 }, promise: '1/2', previous: '1/1' })
+    islander.push({ body: { id: 'x', cookie: '2', body: 2 }, promise: '1/2', previous: '1/1' })
     // Would have been a succesful remap, but we do not have the promises.
     islander.push({
         promise: '2/0', previous: '1/2',
-        value: {
+        body: {
             map: { '1/3': '2/1' }
         }
     })
     islander.push({
         promise: '3/0', previous: '2/0',
-        value: {
+        body: {
             map: null
         }
     })
     islander.push({
-        promise: '3/1', previous: '3/0', value: { id: 'x', cookie: '5', value: null }
+        promise: '3/1', previous: '3/0', body: { id: 'x', cookie: '5', body: null }
     })
     assert(islander.health(), { waiting: 1, pending: 0, boundaries: 0 }, 'flushed')
     islander.push({
-        promise: '3/2', previous: '3/1', value: { id: 'x', cookie: '6', value: null }
+        promise: '3/2', previous: '3/1', body: { id: 'x', cookie: '6', body: null }
     })
     assert(islander.health(), { waiting: 1, pending: 0, boundaries: 0 }, 'retry health')
 
@@ -97,12 +97,12 @@ function prove (assert) {
     // boundary is even submitted to the consensus algorithm.
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '3', value: 3
+        id: 'x', cookie: '3', body: 3
     }], 'retry messages')
     islander.receipts(envelope.cookie, null)
 
     islander.push({
-        promise: '3/3', previous: '3/2', value: { id: 'x', cookie: '3', value: 3 }
+        promise: '3/3', previous: '3/2', body: { id: 'x', cookie: '3', body: 3 }
     })
     assert(islander.health(), { waiting: 0, pending: 0, boundaries: 0 }, 'consumed')
 
@@ -118,34 +118,34 @@ function prove (assert) {
     // looking for valid messages and boundaries.
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '7', value: null
+        id: 'x', cookie: '7', body: null
     }], 'retry messages')
     islander.push({
-        promise: '3/4', previous: '3/3', value: { id: 'x', cookie: '7', value: null }
+        promise: '3/4', previous: '3/3', body: { id: 'x', cookie: '7', body: null }
     })
     islander.receipts(envelope.cookie, { '7': '3/4' })
 
     // Let's fail again.
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '8', value: 4
+        id: 'x', cookie: '8', body: 4
     }], 'next batch messages')
     islander.receipts(envelope.cookie, null)
 
     // Correctly posted.
     islander.push({
-        promise: '3/5', previous: '3/4', value: { id: 'x', cookie: '8', value: 4 }
+        promise: '3/5', previous: '3/4', body: { id: 'x', cookie: '8', body: 4 }
     })
 
     // Now we process a boundary when there are no messages waiting.
     envelope = outbox.shift()
     assert(envelope.messages, [{
-        id: 'x', cookie: '9', value: null
+        id: 'x', cookie: '9', body: null
     }], 'next batch boundary')
     islander.receipts(envelope.cookie, { '9': '3/6' })
 
     // Pass through ignored.
     islander.push({
-        promise: '3/6', previous: '3/5', value: { id: 'x', cookie: '9', value: null }
+        promise: '3/6', previous: '3/5', body: { id: 'x', cookie: '9', body: null }
     })
 }
