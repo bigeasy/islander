@@ -18,7 +18,7 @@ function prove (assert) {
 
     islander.push({ body: { id: '2', cookie: '0', body: 1 }, promise: '1/1', previous: '1/0' })
 
-    assert([ shifter.shift().body, shifter.shift().body ], [{
+    assert([ shifter.shift(), shifter.shift() ], [{
         body: {}, promise: '1/0', previous: '0/0'
     }, {
         body: { id: '2', cookie: '0', body: 1 }, promise: '1/1', previous: '1/0'
@@ -28,7 +28,7 @@ function prove (assert) {
     assert(islander.publish(2), '2', 'second cookie')
     assert(islander.publish(3), '3', 'third cookie')
     assert(islander.health(), { waiting: 1, pending: 2, boundaries: 0 }, 'sent')
-    envelope = outbox.shift().body
+    envelope = outbox.shift()
     assert(envelope, 'outbox ready')
     assert(envelope.messages, [
         { id: 'x', cookie: '1', body: 1 }
@@ -38,7 +38,7 @@ function prove (assert) {
     islander.push({ body: { id: 'y', cookie: '1', body: 1 }, promise: '1/2', previous: '1/1' })
     islander.push({ body: { id: 'x', cookie: '1', body: 1 }, promise: '1/3', previous: '1/2' })
 
-    envelope = outbox.shift().body
+    envelope = outbox.shift()
     assert(envelope.messages, [{
         id: 'x', cookie: '2', body: 2
     }, {
@@ -47,7 +47,7 @@ function prove (assert) {
     islander.receipts(envelope.cookie, { '2': '1/4', '3': '1/5' })
     islander.push({ body: { id: 'x', cookie: '2', body: 2 }, promise: '1/4', previous: '1/3' })
     islander.push({ body: { id: 'x', cookie: '3', body: 3 }, promise: '1/5', previous: '1/4' })
-    assert([ shifter.shift().body, shifter.shift().body, shifter.shift().body, shifter.shift().body ], [{
+    assert([ shifter.shift(), shifter.shift(), shifter.shift(), shifter.shift() ], [{
         body: { id: 'y', cookie: '1', body: 1 }, promise: '1/2', previous: '1/1'
     }, {
         body: { id: 'x', cookie: '1', body: 1 }, promise: '1/3', previous: '1/2'
