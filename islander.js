@@ -10,8 +10,9 @@ function Islander (id) {
     this.id = id
     this._cookie = '0'
     this._governments = []
-    this._sent = []
+    this._seeking = []
     this._pending = []
+    this._sent = null
     this.log = new Procession
     this.log.push({ promise: '0/0' })
     // Only pull one message from the outbox at a time.
@@ -32,7 +33,7 @@ Islander.prototype.publish = function (body) {
 }
 
 Islander.prototype._nudge = function () {
-    if (this._sent.length == 0 && this._pending.length != 0) {
+    if (this._seeking.length == 0 && this._pending.length != 0 && this._sent == null) {
         this._send()
     }
 }
@@ -42,14 +43,10 @@ Islander.prototype._nextCookie = function () {
 }
 
 Islander.prototype._send = function () {
-    var cookie = this._pending[0].cookie
-    var envelope = {
-        cookie: cookie,
-        messages: this._pending.slice()
-    }
-    this._sent.push({ cookie: cookie, messages: this._pending })
+    this._sent = { completed: false, lost: false, messages: this._pending.slice() }
+    this._seeking.push(this._sent)
     this._pending = []
-    this.outbox.push(envelope)
+    this.outbox.push(this._sent.messages)
 }
 
 // TODO Ensure that `_retry` is not called when we're waiting on a send. Come
@@ -57,11 +54,13 @@ Islander.prototype._send = function () {
 
 //
 Islander.prototype._flush = function () {
-    var cookie = this._nextCookie()
-    var messages = [{ id: this.id, cookie: cookie, body: null }]
-    var envelope = { cookie: cookie, messages: messages }
-    this._sent.push({ cookie: cookie, messages: messages })
-    this.outbox.push(envelope)
+    this._sent = {
+        completed: false,
+        lost: false,
+        messages: [{ id: this.id, cookie: this._nextCookie(), body: null }]
+    }
+    this._seeking.push(this._sent)
+    this.outbox.push(this._sent.messages)
 }
 
 // TODO Need to timeout flushes, make sure we're not hammering a broken
@@ -73,19 +72,17 @@ Islander.prototype._flush = function () {
 // failed for whatever reason. We also mark the submission completed.
 
 //
-Islander.prototype.sent = function (cookie, receipts) {
-    this._trace('receipts', [ receipts ])
-    var last = this._sent[this._sent.length - 1]
-    if (last == null || last.cookie != cookie) {
-        return
-    }
-    if (!(last.failed = receipts == null)) {
-        last.messages.forEach(function (message) {
+Islander.prototype.sent = function (receipts) {
+    this._trace('sent', [ receipts ])
+    if (!(this._sent.failed = receipts == null)) {
+        this._sent.messages.forEach(function (message) {
             message.promise = receipts[message.cookie]
         })
     }
-    last.completed = true
+    this._sent.completed = true
+    this._sent = null
     this._remapIf()
+    this._nudge()
 }
 
 // Possible race condition? I think so. The race is that we have two network
@@ -156,19 +153,19 @@ Islander.prototype.push = function (entry) {
     // If this entry does pertains to us, look closer.
     if (this.id == entry.body.id) {
         // Get the next queued message to resolve, if any.
-        var next = this._sent.length ? this._sent[0].messages[0] : { cookie: null }
+        var next = this._seeking.length ? this._seeking[0].messages[0] : { cookie: null }
 
         // Shift a message from our list of awaiting messages if we see it.
         if (next.cookie == entry.body.cookie) {
-            this._sent[0].messages.shift()
+            this._seeking[0].messages.shift()
             // If we've consumed all the messages, maybe sent out another batch.
-            if (this._sent[0].messages.length == 0) {
+            if (this._seeking[0].messages.length == 0) {
                 this._complete()
             }
         } else {
             // If we see any boundary markers, then our sent messages are lost.
-            for (var i = 1, I = this._sent.length; i < I; i++) {
-                if (entry.body.cookie == this._sent[i].messages[0].cookie) {
+            for (var i = 1, I = this._seeking.length; i < I; i++) {
+                if (entry.body.cookie == this._seeking[i].messages[0].cookie) {
                     this._retry()
                     break
                 }
@@ -181,7 +178,7 @@ Islander.prototype.push = function (entry) {
 }
 
 Islander.prototype._complete = function () {
-    this._sent.length = 0
+    this._seeking.length = 0
     this._nudge()
 }
 
@@ -192,9 +189,9 @@ Islander.prototype._complete = function () {
 //
 Islander.prototype._remapIf = function () {
     // No oustanding messages means governments don't matter.
-    if (this._sent.length == 0) {
+    if (this._seeking.length == 0) {
         this._governments.length = 0
-    } else if (this._sent[this._sent.length - 1].failed) {
+    } else if (this._seeking[this._seeking.length - 1].failed) {
         this._flush()
         this._governments.length = 0
     }
@@ -203,7 +200,7 @@ Islander.prototype._remapIf = function () {
         return
     }
     // If we are not waiting on a post, work through the government changes.
-    if (this._sent.reduce(function (completed, sent) {
+    if (this._seeking.reduce(function (completed, sent) {
        return completed && sent.completed
     }, true)) {
         this._remap()
@@ -214,13 +211,13 @@ Islander.prototype._remapIf = function () {
 
 //
 Islander.prototype._remap = function () {
-    var last = this._sent[this._sent.length - 1]
+    var last = this._seeking[this._seeking.length - 1]
     while (this._governments.length) {
         var government = this._governments.shift()
         var map = government.body.map
         // TODO Assert invariant, all message promises are always in same government.
-        for (var i = 0, I = this._sent.length; i < I; i++) {
-            var sent = this._sent[i]
+        for (var i = 0, I = this._seeking.length; i < I; i++) {
+            var sent = this._seeking[i]
             if (sent.failed) {
                 continue
             }
@@ -245,7 +242,7 @@ Islander.prototype._remap = function () {
                 }, true), 'remap did not remap all posted entries')
             }
         }
-        if (this._sent.length == 1 && this._sent[0].lost) {
+        if (this._seeking.length == 1 && this._seeking[0].lost) {
             this._retry()
             this._governments.length = 0
         } else if (last.lost) {
@@ -259,8 +256,8 @@ Islander.prototype._remap = function () {
 
 //
 Islander.prototype._retry = function () {
-    Array.prototype.unshift.apply(this._pending, this._sent[0].messages)
-    this._sent.length = 0
+    Array.prototype.unshift.apply(this._pending, this._seeking[0].messages)
+    this._seeking.length = 0
     this._nudge()
 }
 
@@ -270,9 +267,9 @@ Islander.prototype.enqueue = cadence(function (async, entry) {
 
 Islander.prototype.health = function () {
     return {
-        waiting: this._sent.length && this._sent[0].messages.length,
+        waiting: this._seeking.length && this._seeking[0].messages.length,
         pending: this._pending.length,
-        boundaries: Math.max(this._sent.length - 1, 0)
+        boundaries: Math.max(this._seeking.length - 1, 0)
     }
 }
 
