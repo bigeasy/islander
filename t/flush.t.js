@@ -40,7 +40,7 @@ function prove (assert) {
         { id: 'x', cookie: '1', body: 1 } // ,
     ], 'outbox is not empty')
 
-    islander.receipts(envelope.cookie, { '1': '1/1' })
+    islander.sent(envelope.cookie, { '1': '1/1' })
 
     islander.push({ body: { id: 'x', cookie: '1', body: 1 }, promise: '1/1', previous: '1/0' })
 
@@ -51,22 +51,22 @@ function prove (assert) {
         id: 'x', cookie: '3', body: 3
     }], 'multiple messages')
 
-    islander.receipts(envelope.cookie, null)
+    islander.sent(envelope.cookie, null)
     envelope = outbox.shift()
     assert(envelope.messages, [{
         id: 'x', cookie: '4', body: null
     }], 'first boundary messages')
-    islander.receipts(envelope.cookie, null)
+    islander.sent(envelope.cookie, null)
     envelope = outbox.shift()
     assert(envelope.messages, [{
         id: 'x', cookie: '5', body: null
     }], 'second boundary message')
-    islander.receipts(envelope.cookie, null)
+    islander.sent(envelope.cookie, null)
     envelope = outbox.shift()
     assert(envelope.messages, [{
         id: 'x', cookie: '6', body: null
     }], 'third boundary message')
-    islander.receipts(envelope.cookie, { '6': '3/2' })
+    islander.sent(envelope.cookie, { '6': '3/2' })
     assert(islander.health(), { waiting: 2, pending: 0, boundaries: 3 }, 'bound')
 
     // Successful first entry.
@@ -99,7 +99,7 @@ function prove (assert) {
     assert(envelope.messages, [{
         id: 'x', cookie: '3', body: 3
     }], 'retry messages')
-    islander.receipts(envelope.cookie, null)
+    islander.sent(envelope.cookie, null)
 
     islander.push({
         promise: '3/3', previous: '3/2', body: { id: 'x', cookie: '3', body: 3 }
@@ -123,14 +123,14 @@ function prove (assert) {
     islander.push({
         promise: '3/4', previous: '3/3', body: { id: 'x', cookie: '7', body: null }
     })
-    islander.receipts(envelope.cookie, { '7': '3/4' })
+    islander.sent(envelope.cookie, { '7': '3/4' })
 
     // Let's fail again.
     envelope = outbox.shift()
     assert(envelope.messages, [{
         id: 'x', cookie: '8', body: 4
     }], 'next batch messages')
-    islander.receipts(envelope.cookie, null)
+    islander.sent(envelope.cookie, null)
 
     // Correctly posted.
     islander.push({
@@ -142,7 +142,7 @@ function prove (assert) {
     assert(envelope.messages, [{
         id: 'x', cookie: '9', body: null
     }], 'next batch boundary')
-    islander.receipts(envelope.cookie, { '9': '3/6' })
+    islander.sent(envelope.cookie, { '9': '3/6' })
 
     // Pass through ignored.
     islander.push({

@@ -14,6 +14,7 @@ function Islander (id) {
     this._pending = []
     this.log = new Procession
     this.log.push({ promise: '0/0' })
+    // Only pull one message from the outbox at a time.
     this.outbox = new Procession
 }
 
@@ -68,7 +69,7 @@ Islander.prototype._flush = function () {
 // failed for whatever reason. We also mark the submission completed.
 
 //
-Islander.prototype.receipts = function (cookie, receipts) {
+Islander.prototype.sent = function (cookie, receipts) {
     this._trace('receipts', [ receipts ])
     var last = this._sent[this._sent.length - 1]
     if (last == null || last.cookie != cookie) {
@@ -183,7 +184,6 @@ Islander.prototype._complete = function () {
 // If we have governments queued and we're scanning the atomic log for messages,
 // then we need to possibly map promises if they've been reassigned to the new
 // promises of a new government.
-// <hr>
 
 //
 Islander.prototype._remapIf = function () {
@@ -207,6 +207,8 @@ Islander.prototype._remapIf = function () {
 }
 
 // For each accumulated government, look for
+
+//
 Islander.prototype._remap = function () {
     var last = this._sent[this._sent.length - 1]
     while (this._governments.length) {

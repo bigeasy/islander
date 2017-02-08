@@ -19,7 +19,7 @@ function prove (assert) {
         { id: 'x', cookie: '1', body: 1 }
     ], 'outbox is not empty')
 
-    islander.receipts(envelope.cookie, { '1': '1/1' })
+    islander.sent(envelope.cookie, { '1': '1/1' })
 
     islander.push({ body: { id: 'x', cookie: '1', body: 1 }, promise: '1/1', previous: '1/0' })
 
@@ -30,7 +30,7 @@ function prove (assert) {
         id: 'x', cookie: '3', body: 3
     }], 'multiple messages')
 
-    islander.receipts(envelope.cookie, { '2': '1/2', '3': '1/3' })
+    islander.sent(envelope.cookie, { '2': '1/2', '3': '1/3' })
 
     islander.push({ body: { id: 'x', cookie: '2', body: 2 }, promise: '1/2', previous: '1/1' })
     islander.push({
