@@ -34,7 +34,7 @@
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">var</span> assert = <span class="hljs-built_in">require</span>(<span class="hljs-string">'assert'</span>)
 <span class="hljs-keyword">var</span> Monotonic = <span class="hljs-built_in">require</span>(<span class="hljs-string">'monotonic'</span>).asString
 <span class="hljs-keyword">var</span> cadence = <span class="hljs-built_in">require</span>(<span class="hljs-string">'cadence'</span>)
-<span class="hljs-keyword">var</span> unshift = [].unshif
+<span class="hljs-keyword">var</span> unshift = [].unshift
 <span class="hljs-keyword">var</span> logger = <span class="hljs-built_in">require</span>(<span class="hljs-string">'prolific.logger'</span>).createLogger(<span class="hljs-string">'islander'</span>)
 <span class="hljs-keyword">var</span> Procession = <span class="hljs-built_in">require</span>(<span class="hljs-string">'procession'</span>)
 
@@ -42,11 +42,26 @@
     <span class="hljs-keyword">this</span>.id = id
     <span class="hljs-keyword">this</span>._cookie = <span class="hljs-string">'0'</span>
     <span class="hljs-keyword">this</span>._governments = []
-    <span class="hljs-keyword">this</span>._sent = []
+    <span class="hljs-keyword">this</span>._seeking = []
     <span class="hljs-keyword">this</span>._pending = []
+    <span class="hljs-keyword">this</span>._sent = <span class="hljs-literal">null</span>
     <span class="hljs-keyword">this</span>.log = <span class="hljs-keyword">new</span> Procession
-    <span class="hljs-keyword">this</span>.log.push({ <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span> })
-    <span class="hljs-keyword">this</span>.outbox = <span class="hljs-keyword">new</span> Procession
+    <span class="hljs-keyword">this</span>.log.push({ <span class="hljs-attr">promise</span>: <span class="hljs-string">'0/0'</span> })</pre></div></div>
+
+        </li>
+
+
+        <li id="section-2">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-2">&#182;</a>
+              </div>
+              <p>Only pull one message from the outbox at a time.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.outbox = <span class="hljs-keyword">new</span> Procession
 }
 
 Islander.prototype._trace = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">method, vargs</span>) </span>{
@@ -63,7 +78,7 @@ Islander.prototype.publish = <span class="hljs-function"><span class="hljs-keywo
 }
 
 Islander.prototype._nudge = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._sent.length == <span class="hljs-number">0</span> &amp;&amp; <span class="hljs-keyword">this</span>._pending.length != <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._seeking.length == <span class="hljs-number">0</span> &amp;&amp; <span class="hljs-keyword">this</span>._pending.length != <span class="hljs-number">0</span> &amp;&amp; <span class="hljs-keyword">this</span>._sent == <span class="hljs-literal">null</span>) {
         <span class="hljs-keyword">this</span>._send()
     }
 }
@@ -73,39 +88,11 @@ Islander.prototype._nextCookie = <span class="hljs-function"><span class="hljs-k
 }
 
 Islander.prototype._send = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-    <span class="hljs-keyword">var</span> cookie = <span class="hljs-keyword">this</span>._pending[<span class="hljs-number">0</span>].cookie
-    <span class="hljs-keyword">var</span> envelope = {
-        <span class="hljs-attr">cookie</span>: cookie,
-        <span class="hljs-attr">messages</span>: <span class="hljs-keyword">this</span>._pending.slice()
-    }
-    <span class="hljs-keyword">this</span>._sent.push({ <span class="hljs-attr">cookie</span>: cookie, <span class="hljs-attr">messages</span>: <span class="hljs-keyword">this</span>._pending })
+    <span class="hljs-keyword">this</span>._sent = { <span class="hljs-attr">completed</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">lost</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">messages</span>: <span class="hljs-keyword">this</span>._pending.slice() }
+    <span class="hljs-keyword">this</span>._seeking.push(<span class="hljs-keyword">this</span>._sent)
     <span class="hljs-keyword">this</span>._pending = []
-    <span class="hljs-keyword">this</span>.outbox.push(envelope)
-}
-
-Islander.prototype._flush = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-    <span class="hljs-keyword">var</span> cookie = <span class="hljs-keyword">this</span>._nextCookie()
-    <span class="hljs-keyword">var</span> messages = [{ <span class="hljs-attr">id</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">cookie</span>: cookie, <span class="hljs-attr">body</span>: <span class="hljs-literal">null</span> }]
-    <span class="hljs-keyword">var</span> envelope = { <span class="hljs-attr">cookie</span>: cookie, <span class="hljs-attr">messages</span>: messages }
-    <span class="hljs-keyword">this</span>._sent.push({ <span class="hljs-attr">cookie</span>: cookie, <span class="hljs-attr">messages</span>: messages })
-    <span class="hljs-keyword">this</span>.outbox.push(envelope)
-}
-
-</pre></div></div>
-
-        </li>
-
-
-        <li id="section-2">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-2">&#182;</a>
-              </div>
-              <p>TODO Need to timeout flushes, make sure we’re not hammering a broken
-government.</p>
-
-            </div>
+    <span class="hljs-keyword">this</span>.outbox.push(<span class="hljs-keyword">this</span>._sent.messages)
+}</pre></div></div>
 
         </li>
 
@@ -116,10 +103,8 @@ government.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-3">&#182;</a>
               </div>
-              <p>Called from the envelope with receipts from a submission to the consensus
-algorithm. Using the <code>receipts</code> we assign a promise to each of messages we
-sent based on their cookie. If <code>receipts</code> is <code>null</code>, than the submission
-failed for whatever reason. We also mark the submission completed.</p>
+              <p>TODO Ensure that <code>_retry</code> is not called when we’re waiting on a send. Come
+back and read through the code, add assertions.</p>
 
             </div>
 
@@ -135,22 +120,15 @@ failed for whatever reason. We also mark the submission completed.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>Islander.prototype.receipts = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">cookie, receipts</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'receipts'</span>, [ receipts ])
-    <span class="hljs-keyword">var</span> last = <span class="hljs-keyword">this</span>._sent[<span class="hljs-keyword">this</span>._sent.length - <span class="hljs-number">1</span>]
-    <span class="hljs-keyword">if</span> (last == <span class="hljs-literal">null</span> || last.cookie != cookie) {
-        <span class="hljs-keyword">return</span>
+            <div class="content"><div class='highlight'><pre>Islander.prototype._flush = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">this</span>._sent = {
+        <span class="hljs-attr">completed</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">lost</span>: <span class="hljs-literal">false</span>,
+        <span class="hljs-attr">messages</span>: [{ <span class="hljs-attr">id</span>: <span class="hljs-keyword">this</span>.id, <span class="hljs-attr">cookie</span>: <span class="hljs-keyword">this</span>._nextCookie(), <span class="hljs-attr">body</span>: <span class="hljs-literal">null</span> }]
     }
-    <span class="hljs-keyword">if</span> (!(last.failed = receipts == <span class="hljs-literal">null</span>)) {
-        last.messages.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">message</span>) </span>{
-            message.promise = receipts[message.cookie]
-        })
-    }
-    last.completed = <span class="hljs-literal">true</span>
-    <span class="hljs-keyword">this</span>._remapIf()
-}
-
-</pre></div></div>
+    <span class="hljs-keyword">this</span>._seeking.push(<span class="hljs-keyword">this</span>._sent)
+    <span class="hljs-keyword">this</span>.outbox.push(<span class="hljs-keyword">this</span>._sent.messages)
+}</pre></div></div>
 
         </li>
 
@@ -160,6 +138,61 @@ failed for whatever reason. We also mark the submission completed.</p>
 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-5">&#182;</a>
+              </div>
+              <p>TODO Need to timeout flushes, make sure we’re not hammering a broken
+government.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-6">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-6">&#182;</a>
+              </div>
+              <p>Called from the envelope with receipts from a submission to the consensus
+algorithm. Using the <code>receipts</code> we assign a promise to each of messages we
+sent based on their cookie. If <code>receipts</code> is <code>null</code>, than the submission
+failed for whatever reason. We also mark the submission completed.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-7">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-7">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Islander.prototype.sent = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">receipts</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'sent'</span>, [ receipts ])
+    <span class="hljs-keyword">if</span> (!(<span class="hljs-keyword">this</span>._sent.failed = receipts == <span class="hljs-literal">null</span>)) {
+        <span class="hljs-keyword">this</span>._sent.messages.forEach(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">message</span>) </span>{
+            message.promise = receipts[message.cookie]
+        })
+    }
+    <span class="hljs-keyword">this</span>._sent.completed = <span class="hljs-literal">true</span>
+    <span class="hljs-keyword">this</span>._sent = <span class="hljs-literal">null</span>
+    <span class="hljs-keyword">this</span>._remapIf()
+    <span class="hljs-keyword">this</span>._nudge()
+}</pre></div></div>
+
+        </li>
+
+
+        <li id="section-8">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-8">&#182;</a>
               </div>
               <p>Possible race condition? I think so. The race is that we have two network
 channels. Our object here does not control those channels. We have an outbox.
@@ -191,7 +224,7 @@ which will remap them if the first message has promise, or else wait. The
 all the maps, so we’re going to trust the reamp method to invalidate.</p>
 <p>I suppose remapping tells us not to give up. If we see a government without a
 remap, we’re not going to know to give up until we get our promises. We know
-something bad happened, but without the promises, we don’t know if i
+something bad happened, but without the promises, we don’t know if it
 happened before or after our submission. Could just do the bounary anyway.</p>
 <p>Thus, bounaries need promises, otherwise we’ll never know. The promises make
 this definiative. During a health network round trip, we</p>
@@ -202,70 +235,17 @@ this definiative. During a health network round trip, we</p>
         </li>
 
 
-        <li id="section-6">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-6">&#182;</a>
-              </div>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>Islander.prototype.push = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entry</span>) </span>{
-    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'push'</span>, [ entry ])
-
-</pre></div></div>
-
-        </li>
-
-
-        <li id="section-7">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-7">&#182;</a>
-              </div>
-              <p>User must provide items in order.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>    assert(<span class="hljs-keyword">this</span>._previous == entry.previous || <span class="hljs-keyword">this</span>._previous == <span class="hljs-literal">null</span>, <span class="hljs-string">'out of order'</span>)
-
-</pre></div></div>
-
-        </li>
-
-
-        <li id="section-8">
-            <div class="annotation">
-
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-8">&#182;</a>
-              </div>
-              <p>Make note of the previous promise.</p>
-
-            </div>
-
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>._previous = entry.promise
-
-</pre></div></div>
-
-        </li>
-
-
         <li id="section-9">
             <div class="annotation">
 
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-9">&#182;</a>
               </div>
-              <p>Whatever it is, we can forward it. This is not a filter nor a transform.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.log.push(entry)
-
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>Islander.prototype.push = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">entry</span>) </span>{
+    <span class="hljs-keyword">this</span>._trace(<span class="hljs-string">'push'</span>, [ entry ])</pre></div></div>
 
         </li>
 
@@ -276,13 +256,11 @@ this definiative. During a health network round trip, we</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-10">&#182;</a>
               </div>
-              <p>Take note of whether or not we’re a government.</p>
+              <p>User must provide items in order.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> isGovernment = Monotonic.isBoundary(entry.promise, <span class="hljs-number">0</span>)
-
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    assert(<span class="hljs-keyword">this</span>._previous == entry.previous || <span class="hljs-keyword">this</span>._previous == <span class="hljs-literal">null</span>, <span class="hljs-string">'out of order'</span>)</pre></div></div>
 
         </li>
 
@@ -293,15 +271,11 @@ this definiative. During a health network round trip, we</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-11">&#182;</a>
               </div>
-              <p>Take note of a new government.</p>
+              <p>Make note of the previous promise.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (isGovernment) {
-        <span class="hljs-keyword">this</span>._governments.push(entry)
-    }
-
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>._previous = entry.promise</pre></div></div>
 
         </li>
 
@@ -312,12 +286,11 @@ this definiative. During a health network round trip, we</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-12">&#182;</a>
               </div>
-              <p>If this entry does pertains to us, look closer.</p>
+              <p>Whatever it is, we can forward it. This is not a filter nor a transform.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.id == entry.body.id) {
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>.log.push(entry)</pre></div></div>
 
         </li>
 
@@ -328,13 +301,11 @@ this definiative. During a health network round trip, we</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-13">&#182;</a>
               </div>
-              <p>Get the next queued message to resolve, if any.</p>
+              <p>Take note of whether or not we’re a government.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">var</span> next = <span class="hljs-keyword">this</span>._sent.length ? <span class="hljs-keyword">this</span>._sent[<span class="hljs-number">0</span>].messages[<span class="hljs-number">0</span>] : { <span class="hljs-attr">cookie</span>: <span class="hljs-literal">null</span> }
-
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">var</span> isGovernment = Monotonic.isBoundary(entry.promise, <span class="hljs-number">0</span>)</pre></div></div>
 
         </li>
 
@@ -345,13 +316,13 @@ this definiative. During a health network round trip, we</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-14">&#182;</a>
               </div>
-              <p>Shift a message from our list of awaiting messages if we see it.</p>
+              <p>Take note of a new government.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (next.cookie == entry.body.cookie) {
-            <span class="hljs-keyword">this</span>._sent[<span class="hljs-number">0</span>].messages.shift()
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (isGovernment) {
+        <span class="hljs-keyword">this</span>._governments.push(entry)
+    }</pre></div></div>
 
         </li>
 
@@ -362,15 +333,11 @@ this definiative. During a health network round trip, we</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-15">&#182;</a>
               </div>
-              <p>If we’ve consumed all the messages, maybe sent out another batch.</p>
+              <p>If this entry does pertains to us, look closer.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._sent[<span class="hljs-number">0</span>].messages.length == <span class="hljs-number">0</span>) {
-                <span class="hljs-keyword">this</span>._complete()
-            }
-        } <span class="hljs-keyword">else</span> {
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.id == entry.body.id) {</pre></div></div>
 
         </li>
 
@@ -381,20 +348,11 @@ this definiative. During a health network round trip, we</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-16">&#182;</a>
               </div>
-              <p>If we see any boundary markers, then our sent messages are lost.</p>
+              <p>Get the next queued message to resolve, if any.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">1</span>, I = <span class="hljs-keyword">this</span>._sent.length; i &lt; I; i++) {
-                <span class="hljs-keyword">if</span> (entry.body.cookie == <span class="hljs-keyword">this</span>._sent[i].messages[<span class="hljs-number">0</span>].cookie) {
-                    <span class="hljs-keyword">this</span>._retry()
-                    <span class="hljs-keyword">break</span>
-                }
-            }
-        }
-    }
-
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">var</span> next = <span class="hljs-keyword">this</span>._seeking.length ? <span class="hljs-keyword">this</span>._seeking[<span class="hljs-number">0</span>].messages[<span class="hljs-number">0</span>] : { <span class="hljs-attr">cookie</span>: <span class="hljs-literal">null</span> }</pre></div></div>
 
         </li>
 
@@ -405,19 +363,12 @@ this definiative. During a health network round trip, we</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-17">&#182;</a>
               </div>
-              <p>Remap promises if we’re not waiting on a send.</p>
+              <p>Shift a message from our list of awaiting messages if we see it.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>._remapIf()
-}
-
-Islander.prototype._complete = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-    <span class="hljs-keyword">this</span>._sent.length = <span class="hljs-number">0</span>
-    <span class="hljs-keyword">this</span>._nudge()
-}
-
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">if</span> (next.cookie == entry.body.cookie) {
+            <span class="hljs-keyword">this</span>._seeking[<span class="hljs-number">0</span>].messages.shift()</pre></div></div>
 
         </li>
 
@@ -428,12 +379,14 @@ Islander.prototype._complete = <span class="hljs-function"><span class="hljs-key
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-18">&#182;</a>
               </div>
-              <p>If we have governments queued and we’re scanning the atomic log for messages,
-then we need to possibly map promises if they’ve been reassigned to the new
-promises of a new government.</p>
-<hr>
+              <p>If we’ve consumed all the messages, maybe sent out another batch.</p>
 
             </div>
+
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._seeking[<span class="hljs-number">0</span>].messages.length == <span class="hljs-number">0</span>) {
+                <span class="hljs-keyword">this</span>._complete()
+            }
+        } <span class="hljs-keyword">else</span> {</pre></div></div>
 
         </li>
 
@@ -444,11 +397,18 @@ promises of a new government.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-19">&#182;</a>
               </div>
+              <p>If we see any boundary markers, then our sent messages are lost.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>Islander.prototype._remapIf = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">1</span>, I = <span class="hljs-keyword">this</span>._seeking.length; i &lt; I; i++) {
+                <span class="hljs-keyword">if</span> (entry.body.cookie == <span class="hljs-keyword">this</span>._seeking[i].messages[<span class="hljs-number">0</span>].cookie) {
+                    <span class="hljs-keyword">this</span>._retry()
+                    <span class="hljs-keyword">break</span>
+                }
+            }
+        }
+    }</pre></div></div>
 
         </li>
 
@@ -459,17 +419,17 @@ promises of a new government.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-20">&#182;</a>
               </div>
-              <p>No oustanding messages means governments don’t matter.</p>
+              <p>Remap promises if we’re not waiting on a send.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._sent.length == <span class="hljs-number">0</span>) {
-        <span class="hljs-keyword">this</span>._governments.length = <span class="hljs-number">0</span>
-    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._sent[<span class="hljs-keyword">this</span>._sent.length - <span class="hljs-number">1</span>].failed) {
-        <span class="hljs-keyword">this</span>._flush()
-        <span class="hljs-keyword">this</span>._governments.length = <span class="hljs-number">0</span>
-    }
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">this</span>._remapIf()
+}
+
+Islander.prototype._complete = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">this</span>._seeking.length = <span class="hljs-number">0</span>
+    <span class="hljs-keyword">this</span>._nudge()
+}</pre></div></div>
 
         </li>
 
@@ -480,14 +440,11 @@ promises of a new government.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-21">&#182;</a>
               </div>
-              <p>No governments means nothing to do.</p>
+              <p>If we have governments queued and we’re scanning the atomic log for messages,
+then we need to possibly map promises if they’ve been reassigned to the new
+promises of a new government.</p>
 
             </div>
-
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._governments.length == <span class="hljs-number">0</span>) {
-        <span class="hljs-keyword">return</span>
-    }
-</pre></div></div>
 
         </li>
 
@@ -498,18 +455,10 @@ promises of a new government.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-22">&#182;</a>
               </div>
-              <p>If we are not waiting on a post, work through the government changes.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._sent.reduce(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">completed, sent</span>) </span>{
-       <span class="hljs-keyword">return</span> completed &amp;&amp; sent.completed
-    }, <span class="hljs-literal">true</span>)) {
-        <span class="hljs-keyword">this</span>._remap()
-    }
-}
-
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>Islander.prototype._remapIf = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{</pre></div></div>
 
         </li>
 
@@ -520,16 +469,16 @@ promises of a new government.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-23">&#182;</a>
               </div>
-              <p>For each accumulated government, look for</p>
+              <p>No oustanding messages means governments don’t matter.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>Islander.prototype._remap = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-    <span class="hljs-keyword">var</span> last = <span class="hljs-keyword">this</span>._sent[<span class="hljs-keyword">this</span>._sent.length - <span class="hljs-number">1</span>]
-    <span class="hljs-keyword">while</span> (<span class="hljs-keyword">this</span>._governments.length) {
-        <span class="hljs-keyword">var</span> government = <span class="hljs-keyword">this</span>._governments.shift()
-        <span class="hljs-keyword">var</span> map = government.body.map
-</pre></div></div>
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._seeking.length == <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">this</span>._governments.length = <span class="hljs-number">0</span>
+    } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._seeking[<span class="hljs-keyword">this</span>._seeking.length - <span class="hljs-number">1</span>].failed) {
+        <span class="hljs-keyword">this</span>._flush()
+        <span class="hljs-keyword">this</span>._governments.length = <span class="hljs-number">0</span>
+    }</pre></div></div>
 
         </li>
 
@@ -540,16 +489,101 @@ promises of a new government.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-24">&#182;</a>
               </div>
+              <p>No governments means nothing to do.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._governments.length == <span class="hljs-number">0</span>) {
+        <span class="hljs-keyword">return</span>
+    }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-25">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-25">&#182;</a>
+              </div>
+              <p>If we are not waiting on a post, work through the government changes.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._seeking.reduce(<span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params">completed, sent</span>) </span>{
+       <span class="hljs-keyword">return</span> completed &amp;&amp; sent.completed
+    }, <span class="hljs-literal">true</span>)) {
+        <span class="hljs-keyword">this</span>._remap()
+    }
+}</pre></div></div>
+
+        </li>
+
+
+        <li id="section-26">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-26">&#182;</a>
+              </div>
+              <p>For each accumulated government, look for</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-27">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-27">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Islander.prototype._remap = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">var</span> last = <span class="hljs-keyword">this</span>._seeking[<span class="hljs-keyword">this</span>._seeking.length - <span class="hljs-number">1</span>]
+    <span class="hljs-keyword">while</span> (<span class="hljs-keyword">this</span>._governments.length) {
+        <span class="hljs-keyword">var</span> government = <span class="hljs-keyword">this</span>._governments.shift()
+        <span class="hljs-keyword">var</span> map = government.body.map</pre></div></div>
+
+        </li>
+
+
+        <li id="section-28">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-28">&#182;</a>
+              </div>
               <p>TODO Assert invariant, all message promises are always in same government.</p>
 
             </div>
 
-            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>, I = <span class="hljs-keyword">this</span>._sent.length; i &lt; I; i++) {
-            <span class="hljs-keyword">var</span> sent = <span class="hljs-keyword">this</span>._sent[i]
+            <div class="content"><div class='highlight'><pre>        <span class="hljs-keyword">for</span> (<span class="hljs-keyword">var</span> i = <span class="hljs-number">0</span>, I = <span class="hljs-keyword">this</span>._seeking.length; i &lt; I; i++) {
+            <span class="hljs-keyword">var</span> sent = <span class="hljs-keyword">this</span>._seeking[i]
             <span class="hljs-keyword">if</span> (sent.failed) {
                 <span class="hljs-keyword">continue</span>
-            }
-            <span class="hljs-keyword">if</span> (sent.messages[<span class="hljs-number">0</span>].promise == <span class="hljs-literal">null</span>) {
+            }</pre></div></div>
+
+        </li>
+
+
+        <li id="section-29">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-29">&#182;</a>
+              </div>
+              <p>TODO Have a <code>done</code> flag on <code>sent</code> instead. If we’re hear, we can
+break because we should be at the send, and we should assert that
+we are at the last send. We can’t mark <code>last</code> as <code>lost</code> so we
+won’t <code>_retry</code> below. Nor will we <code>_flush</code>.</p>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>            <span class="hljs-keyword">if</span> (sent.messages[<span class="hljs-number">0</span>].promise == <span class="hljs-literal">null</span>) {
                 <span class="hljs-keyword">continue</span>
             }
             <span class="hljs-keyword">if</span> (Monotonic.compare(government.promise, sent.messages[<span class="hljs-number">0</span>].promise) &lt; <span class="hljs-number">0</span>) {
@@ -566,7 +600,7 @@ promises of a new government.</p>
                 }, <span class="hljs-literal">true</span>), <span class="hljs-string">'remap did not remap all posted entries'</span>)
             }
         }
-        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._sent.length == <span class="hljs-number">1</span> &amp;&amp; <span class="hljs-keyword">this</span>._sent[<span class="hljs-number">0</span>].lost) {
+        <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>._seeking.length == <span class="hljs-number">1</span> &amp;&amp; <span class="hljs-keyword">this</span>._seeking[<span class="hljs-number">0</span>].lost) {
             <span class="hljs-keyword">this</span>._retry()
             <span class="hljs-keyword">this</span>._governments.length = <span class="hljs-number">0</span>
         } <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (last.lost) {
@@ -574,11 +608,36 @@ promises of a new government.</p>
             <span class="hljs-keyword">this</span>._governments.length = <span class="hljs-number">0</span>
         }
     }
-}
+}</pre></div></div>
 
-Islander.prototype._retry = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
-    <span class="hljs-built_in">Array</span>.prototype.unshift.apply(<span class="hljs-keyword">this</span>._pending, <span class="hljs-keyword">this</span>._sent[<span class="hljs-number">0</span>].messages)
-    <span class="hljs-keyword">this</span>._sent.length = <span class="hljs-number">0</span>
+        </li>
+
+
+        <li id="section-30">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-30">&#182;</a>
+              </div>
+              <p>TODO Ensure that <code>_retry</code> is not called when we’re waiting on a send.</p>
+
+            </div>
+
+        </li>
+
+
+        <li id="section-31">
+            <div class="annotation">
+
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-31">&#182;</a>
+              </div>
+
+            </div>
+
+            <div class="content"><div class='highlight'><pre>Islander.prototype._retry = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-built_in">Array</span>.prototype.unshift.apply(<span class="hljs-keyword">this</span>._pending, <span class="hljs-keyword">this</span>._seeking[<span class="hljs-number">0</span>].messages)
+    <span class="hljs-keyword">this</span>._seeking.length = <span class="hljs-number">0</span>
     <span class="hljs-keyword">this</span>._nudge()
 }
 
@@ -588,15 +647,13 @@ Islander.prototype.enqueue = cadence(<span class="hljs-function"><span class="hl
 
 Islander.prototype.health = <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
     <span class="hljs-keyword">return</span> {
-        <span class="hljs-attr">waiting</span>: <span class="hljs-keyword">this</span>._sent.length &amp;&amp; <span class="hljs-keyword">this</span>._sent[<span class="hljs-number">0</span>].messages.length,
+        <span class="hljs-attr">waiting</span>: <span class="hljs-keyword">this</span>._seeking.length &amp;&amp; <span class="hljs-keyword">this</span>._seeking[<span class="hljs-number">0</span>].messages.length,
         <span class="hljs-attr">pending</span>: <span class="hljs-keyword">this</span>._pending.length,
-        <span class="hljs-attr">boundaries</span>: <span class="hljs-built_in">Math</span>.max(<span class="hljs-keyword">this</span>._sent.length - <span class="hljs-number">1</span>, <span class="hljs-number">0</span>)
+        <span class="hljs-attr">boundaries</span>: <span class="hljs-built_in">Math</span>.max(<span class="hljs-keyword">this</span>._seeking.length - <span class="hljs-number">1</span>, <span class="hljs-number">0</span>)
     }
 }
 
-<span class="hljs-built_in">module</span>.exports = Islander
-
-</pre></div></div>
+<span class="hljs-built_in">module</span>.exports = Islander</pre></div></div>
 
         </li>
 
