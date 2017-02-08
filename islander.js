@@ -52,6 +52,10 @@ Islander.prototype._send = function () {
     this.outbox.push(envelope)
 }
 
+// TODO Ensure that `_retry` is not called when we're waiting on a send. Come
+// back and read through the code, add assertions.
+
+//
 Islander.prototype._flush = function () {
     var cookie = this._nextCookie()
     var messages = [{ id: this.id, cookie: cookie, body: null }]
@@ -220,6 +224,10 @@ Islander.prototype._remap = function () {
             if (sent.failed) {
                 continue
             }
+            // TODO Have a `done` flag on `sent` instead. If we're hear, we can
+            // break because we should be at the send, and we should assert that
+            // we are at the last send. We can't mark `last` as `lost` so we
+            // won't `_retry` below. Nor will we `_flush`.
             if (sent.messages[0].promise == null) {
                 continue
             }
@@ -247,6 +255,9 @@ Islander.prototype._remap = function () {
     }
 }
 
+// TODO Ensure that `_retry` is not called when we're waiting on a send.
+
+//
 Islander.prototype._retry = function () {
     Array.prototype.unshift.apply(this._pending, this._sent[0].messages)
     this._sent.length = 0
