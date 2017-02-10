@@ -31,7 +31,7 @@
                             "cadence":                      "1.0.x",
                             "monotonic":                    "2.0.x",
                             "procession":                   "0.0.31",
-                            "prolific.logger":              "2.0.x"
+                            "prolific.logger":              "3.0.x"
     },
     "devDependencies":
     {
