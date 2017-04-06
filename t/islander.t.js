@@ -1,4 +1,4 @@
-require('proof/redux')(13, prove)
+require('proof')(13, prove)
 
 function prove (assert) {
     var Islander = require('../islander')

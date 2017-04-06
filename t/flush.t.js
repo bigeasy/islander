@@ -1,4 +1,4 @@
-require('proof/redux')(21, prove)
+require('proof')(21, prove)
 
 // Test that a failed response will trigger a boundary.
 //
