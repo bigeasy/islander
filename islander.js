@@ -46,7 +46,7 @@ Islander.prototype._send = function () {
     this._sent = { completed: false, lost: false, messages: this._pending.slice() }
     this._seeking.push(this._sent)
     this._pending = []
-    this.outbox.push(this._sent.messages)
+    this.outbox.push(JSON.parse(JSON.stringify(this._sent.messages)))
 }
 
 // TODO Ensure that `_retry` is not called when we're waiting on a send. Come
