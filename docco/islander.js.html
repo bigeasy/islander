@@ -91,7 +91,7 @@ Islander.prototype._send = <span class="hljs-function"><span class="hljs-keyword
     <span class="hljs-keyword">this</span>._sent = { <span class="hljs-attr">completed</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">lost</span>: <span class="hljs-literal">false</span>, <span class="hljs-attr">messages</span>: <span class="hljs-keyword">this</span>._pending.slice() }
     <span class="hljs-keyword">this</span>._seeking.push(<span class="hljs-keyword">this</span>._sent)
     <span class="hljs-keyword">this</span>._pending = []
-    <span class="hljs-keyword">this</span>.outbox.push(<span class="hljs-keyword">this</span>._sent.messages)
+    <span class="hljs-keyword">this</span>.outbox.push(<span class="hljs-built_in">JSON</span>.parse(<span class="hljs-built_in">JSON</span>.stringify(<span class="hljs-keyword">this</span>._sent.messages)))
 }</pre></div></div>
 
         </li>
