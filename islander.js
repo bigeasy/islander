@@ -142,11 +142,8 @@ Islander.prototype.push = function (entry) {
     // Whatever it is, we can forward it. This is not a filter nor a transform.
     this.log.push(entry)
 
-    // Take note of whether or not we're a government.
-    var isGovernment = Monotonic.isBoundary(entry.promise, 0)
-
     // Take note of a new government.
-    if (isGovernment) {
+    if (Monotonic.isBoundary(entry.promise, 0)) {
         this._governments.push(entry)
     }
 
