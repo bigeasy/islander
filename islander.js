@@ -10,7 +10,12 @@ function Islander (id) {
     this.id = id
     this._cookie = '0'
     this._governments = []
+    // TODO What is the structure, how are objects grouped? It appears that
+    // `_seeking` are sent batches, generally zero or one outstanding messages
+    // followed by zero or more flush messages. Confirm and document.
     this._seeking = []
+    // Pending appears to be the next first entry into `_seeking`. This
+    // structure is like the one in `Sequester`.
     this._pending = []
     this._sent = null
     this.log = new Procession
@@ -85,49 +90,18 @@ Islander.prototype.sent = function (receipts) {
     this._nudge()
 }
 
-// Possible race condition? I think so. The race is that we have two network
-// channels. Our object here does not control those channels. We have an outbox.
-// That outbox has a batch of messages to publish to the consensus algorithm. We
-// wait for those messages to obtain receipts that will match out cookies with
-// promises. We cannot process the atomic log without knowing the promises.
-//
-// It really ought not matter, since we could simply see our cookies coming
-// through the atomic log, so we could process the log while we're waiting.
-// However, we have this concept of remapping, where promises that are made by
-// one government are mapped to promises made by a new government, instead of
-// simply invalidating the promises of the previous government. We remap
-// promises on government changes when we can.
-//
-// Still doesn't quite matter since we're only ever looking for those cookies in
-// the atomic log. Remapping shouldn't matter. The only thing that matters is
-// that we detect when our messages have not made it into the consensus queue,
-// or have been lost to to a consensus collapse.
-//
-// Thus, we can imagine a way to process the atomic log looking for cookies when
-// we might not yet know their promises, shifting those entries, then mapping
-// promises to the cookies when they arrive. Upon mapping the promises to the
-// cookies we check to see if the promises are never going to be kept, then go
-// into our failure state, posting a boundary. Instead of promise based, the
-// boundary is cookie based. When we see the boundary we know to repost all of
-// our sent messages not yet seen in the atomic log.
-//
-// This leaves remapping. We need to gather up maps while promises are unknown.
-// We need to remap once they are. When we see maps, we can push them somewhere,
-// which will remap them if the first message has promise, or else wait. The
-// `sent` method can push an empty map, er, yeah, sure.
-//
-// We won't know if a change in government invalidates a promise until we have
-// all the maps, so we're going to trust the reamp method to invalidate.
-//
-// I suppose remapping tells us not to give up. If we see a government without a
-// remap, we're not going to know to give up until we get our promises. We know
-// something bad happened, but without the promises, we don't know if it
-// happened before or after our submission. Could just do the bounary anyway.
-//
-// Thus, bounaries need promises, otherwise we'll never know. The promises make
-// this definiative. During a health network round trip, we
-//
-// <hr>
+// Long diatribe. Initially about race conditions possibly introduced by the
+// process bounardy between the Compassion Colleague and the Conference based
+// application that it is running. Doesn't seem likely to me.
+
+// Then a wondering why we don't just track the cookies alone. This trails off
+// into a realization that the current system with the remapping is definitive.
+
+// Possibly there is some confusion about using an outbox when there is only
+// ever one message outbound at a time. It is a single message with an array of
+// accumulated messages to send. A structure like Turnstile.Check seems more
+// appropriate, but it isn't really, because the callback is assigned at
+// construction. Procession indicates you can connect later.
 
 //
 Islander.prototype.push = function (entry) {
@@ -214,27 +188,24 @@ Islander.prototype._remap = function () {
         var map = government.body.map
         // TODO Assert invariant, all message promises are always in same government.
         for (var i = 0, I = this._seeking.length; i < I; i++) {
-            var sent = this._seeking[i]
-            if (sent.failed) {
+            var seeking = this._seeking[i]
+            if (!seeking.completed) {
+                assert(i == I, 'should be at end')
+                break
+            }
+            if (seeking.failed) {
                 continue
             }
-            // TODO Have a `done` flag on `sent` instead. If we're hear, we can
-            // break because we should be at the send, and we should assert that
-            // we are at the last send. We can't mark `last` as `lost` so we
-            // won't `_retry` below. Nor will we `_flush`.
-            if (sent.messages[0].promise == null) {
-                continue
-            }
-            if (Monotonic.compare(government.promise, sent.messages[0].promise) < 0) {
+            if (Monotonic.compare(government.promise, seeking.messages[0].promise) < 0) {
                 continue
             }
             if (map == null) {
-                sent.lost = true
+                seeking.lost = true
             } else {
-                sent.messages.forEach(function (message) {
+                seeking.messages.forEach(function (message) {
                     message.promise = map[message.promise]
                 })
-                assert(sent.messages.reduce(function (remapped, message) {
+                assert(seeking.messages.reduce(function (remapped, message) {
                     return remapped && message.promise != null
                 }, true), 'remap did not remap all posted entries')
             }
