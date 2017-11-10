@@ -17,7 +17,11 @@ function Islander (id) {
     // Pending appears to be the next first entry into `_seeking`. This
     // structure is like the one in `Sequester`.
     this._pending = []
-    this._sent = null
+    // Be cool with is. You need to track the sending message outside of the
+    // seeking array because you like to obliterate the seeking array when you
+    // you're ready to retry. You won't be able to get the sending state out of
+    // seeking. You don't want to manage an ever growing seeking queue.
+    this._sending = null
     this.log = new Procession
     this.log.push({ promise: '0/0' })
     // Only pull one message from the outbox at a time.
@@ -38,7 +42,7 @@ Islander.prototype.publish = function (body) {
 }
 
 Islander.prototype._nudge = function () {
-    if (this._seeking.length == 0 && this._pending.length != 0 && this._sent == null) {
+    if (this._seeking.length == 0 && this._pending.length != 0 && this._sending == null) {
         this._send()
     }
 }
@@ -48,10 +52,10 @@ Islander.prototype._nextCookie = function () {
 }
 
 Islander.prototype._send = function () {
-    this._sent = { completed: false, lost: false, messages: this._pending.slice() }
-    this._seeking.push(this._sent)
+    this._sending = { completed: false, lost: false, messages: this._pending.slice() }
+    this._seeking.push(this._sending)
     this._pending = []
-    this.outbox.push(JSON.parse(JSON.stringify(this._sent.messages)))
+    this.outbox.push(JSON.parse(JSON.stringify(this._sending.messages)))
 }
 
 // TODO Ensure that `_retry` is not called when we're waiting on a send. Come
@@ -59,13 +63,13 @@ Islander.prototype._send = function () {
 
 //
 Islander.prototype._flush = function () {
-    this._sent = {
+    this._sending = {
         completed: false,
         lost: false,
         messages: [{ id: this.id, cookie: this._nextCookie(), body: null }]
     }
-    this._seeking.push(this._sent)
-    this.outbox.push(this._sent.messages)
+    this._seeking.push(this._sending)
+    this.outbox.push(this._sending.messages)
 }
 
 // TODO Need to timeout flushes, make sure we're not hammering a broken
@@ -79,13 +83,13 @@ Islander.prototype._flush = function () {
 //
 Islander.prototype.sent = function (receipts) {
     this._trace('sent', [ receipts ])
-    if (!(this._sent.failed = receipts == null)) {
-        this._sent.messages.forEach(function (message) {
+    if (!(this._sending.failed = receipts == null)) {
+        this._sending.messages.forEach(function (message) {
             message.promise = receipts[message.cookie]
         })
     }
-    this._sent.completed = true
-    this._sent = null
+    this._sending.completed = true
+    this._sending = null
     this._remapIf()
     this._nudge()
 }
