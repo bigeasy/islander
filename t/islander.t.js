@@ -1,4 +1,4 @@
-require('proof')(13, prove)
+require('proof')(10, prove)
 
 function prove (assert) {
     var Islander = require('../islander')
@@ -24,26 +24,30 @@ function prove (assert) {
         body: { id: '2', cookie: '0', body: 1 }, promise: '1/1', previous: '1/0'
     }], 'pass through')
 
-    assert(islander.publish(1), '1', 'cookie')
-    assert(islander.publish(2), '2', 'second cookie')
-    assert(islander.publish(3), '3', 'third cookie')
-    assert(islander.health(), { waiting: 1, pending: 2, boundaries: 0 }, 'sent')
+    islander.publish(1)
+    islander.publish(2)
+    islander.publish(3)
+    assert(islander.health(), { waiting: 1, pending: 2 }, 'sent')
     messages = outbox.shift()
     assert(messages, 'outbox ready')
-    assert(messages, [
-        { id: 'x', cookie: '1', body: 1 }
-    ], 'outbox is not empty')
-    islander.sent({ '1': '1/3' })
+    assert(messages, {
+        cookie: '1',
+        messages: [{ id: 'x', cookie: '1', body: 1, promise: null }]
+    }, 'outbox is not empty')
+    islander.sent('1', { '1': '1/3' })
 
     islander.push({ body: { id: 'y', cookie: '1', body: 1 }, promise: '1/2', previous: '1/1' })
     islander.push({ body: { id: 'x', cookie: '1', body: 1 }, promise: '1/3', previous: '1/2' })
 
     messages = outbox.shift()
-    assert(messages, [{
-        id: 'x', cookie: '2', body: 2
-    }, {
-        id: 'x', cookie: '3', body: 3
-    }], 'multiple messages')
+    assert(messages, {
+        cookie: '3',
+        messages: [{
+            id: 'x', cookie: '2', body: 2, promise: null
+        }, {
+            id: 'x', cookie: '3', body: 3, promise: null
+        }]
+    }, 'multiple messages')
     islander.sent({ '2': '1/4', '3': '1/5' })
     islander.push({ body: { id: 'x', cookie: '2', body: 2 }, promise: '1/4', previous: '1/3' })
     islander.push({ body: { id: 'x', cookie: '3', body: 3 }, promise: '1/5', previous: '1/4' })
@@ -57,5 +61,5 @@ function prove (assert) {
         body: { id: 'x', cookie: '3', body: 3 }, promise: '1/5', previous: '1/4'
     }], 'pass through')
 
-    assert(islander.health(), { waiting: 0, pending: 0, boundaries: 0 }, 'consumed')
+    assert(islander.health(), { waiting: 0, pending: 0 }, 'consumed')
 }

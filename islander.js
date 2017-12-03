@@ -9,51 +9,52 @@ var Procession = require('procession')
 function Islander (id) {
     this.id = id
     this._cookie = '0'
-    this._governments = []
     // TODO What is the structure, how are objects grouped? It appears that
     // `_seeking` are sent batches, generally zero or one outstanding messages
     // followed by zero or more flush messages. Confirm and document.
     //
     // Our structure somelinke like the one in `Sequester`, but not really.
-    this._seeking = []
+    this._seeking = { messages: [] }
     // Pending appears to be the next first entry into `_seeking`, one that we
     // biuld while we are waiting for all of the seeking entries to arrive.
     this._pending = []
-    // Be cool with is. You need to track the sending message outside of the
-    // seeking array because you like to obliterate the seeking array when you
-    // you're ready to retry. You won't be able to get the sending state out of
-    // seeking. You don't want to manage an ever growing seeking queue.
-    //
-    // Working on being not cool with this and getting all state into a queue.
-    this._sending = null
     this.log = new Procession
     this.log.push({ promise: '0/0' })
     // Only pull one message from the outbox at a time.
     this.outbox = new Procession
 }
 
-Islander.prototype.publish = function (body) {
-    var cookie = this._nextCookie()
-    this._pending.push({ id: this.id, cookie: cookie, body: body })
-    this._nudge()
-    return cookie
-}
-
-Islander.prototype._nudge = function () {
-    if (this._seeking.length == 0 && this._pending.length != 0 && this._sending == null) {
-        this._send()
-    }
-}
-
 Islander.prototype._nextCookie = function () {
     return this._cookie = Monotonic.increment(this._cookie, 0)
 }
 
-Islander.prototype._send = function () {
-    this._sending = { completed: false, lost: false, messages: this._pending.slice() }
-    this._seeking.push(this._sending)
-    this._pending = []
-    this.outbox.push(JSON.parse(JSON.stringify(this._sending.messages)))
+Islander.prototype.publish = function (body) {
+    assert(body, 'body cannot be null')
+    this._pending.push({ id: this.id, cookie: null, body: body, promise: null })
+    this._nudge()
+}
+
+Islander.prototype._nudge = function () {
+    if (
+        this._seeking.messages.length == 0 &&
+        this._pending.length != 0
+    ) {
+        var messages = this._pending.splice(0, this._pending.length)
+        // Assign cookies. If some of the messages are retries, we need to reset
+        // the messages.
+        messages.forEach(function (message) {
+            message.cookie = this._nextCookie()
+            message.promise = null
+        }, this)
+        this._seeking = { cookie: this._cookie, messages: messages }
+        this._seeking.messages.forEach(function (message) {
+            message.promise = null
+        })
+        this.outbox.push({
+            cookie: this._seeking.cookie,
+            messages: JSON.parse(JSON.stringify(this._seeking.messages))
+        })
+    }
 }
 
 // TODO Ensure that `_retry` is not called when we're waiting on a send. Come
@@ -61,13 +62,14 @@ Islander.prototype._send = function () {
 
 //
 Islander.prototype._flush = function () {
-    this._sending = {
-        completed: false,
-        lost: false,
-        messages: [{ id: this.id, cookie: this._nextCookie(), body: null }]
+    if (this._seeking.cookie == null) {
+        this._seeking.flushing = true
+        this._seeking.cookie = this._nextCookie()
+        this.outbox.push({
+            cookie: this._seeking.cookie,
+            messages: [{ id: this.id, cookie: this._seeking.cookie, body: null }]
+        })
     }
-    this._seeking.push(this._sending)
-    this.outbox.push(this._sending.messages)
 }
 
 // TODO Need to timeout flushes, make sure we're not hammering a broken
@@ -79,16 +81,17 @@ Islander.prototype._flush = function () {
 // failed for whatever reason. We also mark the submission completed.
 
 //
-Islander.prototype.sent = function (receipts) {
-    if (!(this._sending.failed = receipts == null)) {
-        this._sending.messages.forEach(function (message) {
-            message.promise = receipts[message.cookie]
-        })
+Islander.prototype.sent = function (cookie, receipts) {
+    if (this._seeking.cookie == cookie) {
+        if (receipts == null) {
+            this._seeking.cookie = null
+        } else if (!this._seeking.flushing) {
+            this._seeking.messages.forEach(function (message) {
+                message.promise = receipts[message.cookie]
+            })
+        }
+        this._flush()
     }
-    this._sending.completed = true
-    this._sending = null
-    this._remapIf()
-    this._nudge()
 }
 
 // Long diatribe. Initially about race conditions possibly introduced by the
@@ -115,117 +118,48 @@ Islander.prototype.push = function (entry) {
     // Whatever it is, we can forward it. This is not a filter nor a transform.
     this.log.push(entry)
 
-    // Take note of a new government.
-    if (Monotonic.isBoundary(entry.promise, 0)) {
-        this._governments.push(entry)
-    }
-
-    // If this entry does pertains to us, look closer.
-    if (this.id == entry.body.id) {
-        // Get the next queued message to resolve, if any.
-        var next = this._seeking.length ? this._seeking[0].messages[0] : { cookie: null }
-
-        // Shift a message from our list of awaiting messages if we see it.
-        if (next.cookie == entry.body.cookie) {
-            this._seeking[0].messages.shift()
-            // If we've consumed all the messages, maybe sent out another batch.
-            if (this._seeking[0].messages.length == 0) {
-                this._complete()
-            }
-        } else {
-            // If we see any boundary markers, then our sent messages are lost.
-            for (var i = 1, I = this._seeking.length; i < I; i++) {
-                if (entry.body.cookie == this._seeking[i].messages[0].cookie) {
-                    this._retry()
-                    break
-                }
-            }
-        }
-    }
-
-    // Remap promises if we're not waiting on a send.
-    this._remapIf()
-}
-
-Islander.prototype._complete = function () {
-    this._seeking.length = 0
-    this._nudge()
-}
-
-// If we have governments queued and we're scanning the atomic log for messages,
-// then we need to possibly map promises if they've been reassigned to the new
-// promises of a new government.
-
-//
-Islander.prototype._remapIf = function () {
-    // No oustanding messages means governments don't matter.
-    if (this._seeking.length == 0) {
-        this._governments.length = 0
-    } else if (this._seeking[this._seeking.length - 1].failed) {
-        this._flush()
-        this._governments.length = 0
-    }
-    // No governments means nothing to do.
-    if (this._governments.length == 0) {
+    // If we are not waiting on any messages then there is nothing to do.
+    if (this._seeking.messages.length == 0) {
         return
     }
-    // If we are not waiting on a post, work through the government changes.
-    if (this._seeking.reduce(function (completed, sent) {
-       return completed && sent.completed
-    }, true)) {
-        this._remap()
-    }
-}
 
-// For each accumulated government, look for
-
-//
-Islander.prototype._remap = function () {
-    var last = this._seeking[this._seeking.length - 1]
-    while (this._governments.length) {
-        var government = this._governments.shift()
-        var map = government.body.map
-        // TODO Assert invariant, all message promises are always in same government.
-        for (var i = 0, I = this._seeking.length; i < I; i++) {
-            var seeking = this._seeking[i]
-            if (!seeking.completed) {
-                assert(i == I, 'should be at end')
-                break
-            }
-            if (seeking.failed) {
-                continue
-            }
-            if (Monotonic.compare(government.promise, seeking.messages[0].promise) < 0) {
-                continue
-            }
-            if (map == null) {
-                seeking.lost = true
-            } else {
-                seeking.messages.forEach(function (message) {
-                    message.promise = map[message.promise]
-                })
-                assert(seeking.messages.reduce(function (remapped, message) {
-                    return remapped && message.promise != null
-                }, true), 'remap did not remap all posted entries')
-            }
+    // Take note of a new government.
+    if (Monotonic.isBoundary(entry.promise, 0)) {
+        var map = entry.body.map
+        if (map == null) {
+            // We will never remap anything so if any cookie we're using for
+            // flushing will now be invalid.
+            this._seeking.cookie = null
         }
-        if (this._seeking.length == 1 && this._seeking[0].lost) {
-            this._retry()
-            this._governments.length = 0
-        } else if (last.lost) {
+        if (map == null || this._seeking.messages[0].promise == null) {
+            // Failed a remap because of a consensus collapse or else we didn't
+            // get our receipts in time.
             this._flush()
-            this._governments.length = 0
+        } else {
+            // Remap.
+            this._seeking.messages.forEach(function (message) {
+                message.promise = map[message.promise]
+            })
+            assert(this._seeking.messages.reduce(function (remapped, message) {
+                return remapped && message.promise != null
+            }, true), 'remap did not remap all posted entries')
+        }
+    // If this entry does pertains to us, look closer.
+    } else if (this.id == entry.body.id) {
+        // Shift a message from our list of awaiting messages if we see it.
+        if (entry.body.cookie == this._seeking.messages[0].cookie) {
+            this._seeking.messages.shift()
+            // If we've consumed all the messages, maybe sent out another batch.
+            if (this._seeking.messages.length == 0) {
+                this._nudge()
+            }
+        } else if (entry.body.cookie == this._seeking.cookie) {
+            // We've flushed so it is time to retry.
+            var retries = this._seeking.messages.splice(0, this._seeking.messages.length)
+            Array.prototype.unshift.apply(this._pending, retries)
+            this._nudge()
         }
     }
-}
-
-// TODO Ensure that `_retry` is not called when we're waiting on a send.
-
-//
-Islander.prototype._retry = function () {
-    Array.prototype.unshift.apply(this._pending, this._seeking[0].messages)
-    this._seeking.length = 0
-    this._nudge()
 }
 
 Islander.prototype.enqueue = cadence(function (async, entry) {
@@ -234,9 +168,8 @@ Islander.prototype.enqueue = cadence(function (async, entry) {
 
 Islander.prototype.health = function () {
     return {
-        waiting: this._seeking.length && this._seeking[0].messages.length,
-        pending: this._pending.length,
-        boundaries: Math.max(this._seeking.length - 1, 0)
+        waiting: this._seeking.messages.length,
+        pending: this._pending.length
     }
 }
 
