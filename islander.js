@@ -32,12 +32,7 @@ function Islander (id) {
     this.outbox = new Procession
 }
 
-Islander.prototype._trace = function (method, vargs) {
-    logger.trace(method, { $vargs: vargs })
-}
-
 Islander.prototype.publish = function (body) {
-    this._trace('publish', [ body ])
     var cookie = this._nextCookie()
     var request = { cookie: cookie, body: body }
     this._pending.push({ id: this.id, cookie: cookie, body: body })
@@ -86,7 +81,6 @@ Islander.prototype._flush = function () {
 
 //
 Islander.prototype.sent = function (receipts) {
-    this._trace('sent', [ receipts ])
     if (!(this._sending.failed = receipts == null)) {
         this._sending.messages.forEach(function (message) {
             message.promise = receipts[message.cookie]
@@ -113,8 +107,6 @@ Islander.prototype.sent = function (receipts) {
 
 //
 Islander.prototype.push = function (entry) {
-    this._trace('push', [ entry ])
-
     // User must provide items in order.
     assert(this._previous == entry.previous || this._previous == null, 'out of order')
 
