@@ -34,7 +34,6 @@ function Islander (id) {
 
 Islander.prototype.publish = function (body) {
     var cookie = this._nextCookie()
-    var request = { cookie: cookie, body: body }
     this._pending.push({ id: this.id, cookie: cookie, body: body })
     this._nudge()
     return cookie
