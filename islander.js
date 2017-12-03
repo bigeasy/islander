@@ -13,14 +13,18 @@ function Islander (id) {
     // TODO What is the structure, how are objects grouped? It appears that
     // `_seeking` are sent batches, generally zero or one outstanding messages
     // followed by zero or more flush messages. Confirm and document.
+    //
+    // Our structure somelinke like the one in `Sequester`, but not really.
     this._seeking = []
-    // Pending appears to be the next first entry into `_seeking`. This
-    // structure is like the one in `Sequester`.
+    // Pending appears to be the next first entry into `_seeking`, one that we
+    // biuld while we are waiting for all of the seeking entries to arrive.
     this._pending = []
     // Be cool with is. You need to track the sending message outside of the
     // seeking array because you like to obliterate the seeking array when you
     // you're ready to retry. You won't be able to get the sending state out of
     // seeking. You don't want to manage an ever growing seeking queue.
+    //
+    // Working on being not cool with this and getting all state into a queue.
     this._sending = null
     this.log = new Procession
     this.log.push({ promise: '0/0' })
