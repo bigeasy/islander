@@ -28,7 +28,6 @@ function prove (okay) {
 
     var islander = new Islander('x')
     var outbox = islander.outbox.shifter()
-    var shifter = islander.log.shifter()
     var envelope
 
     islander.publish(1)

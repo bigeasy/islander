@@ -18,8 +18,6 @@ function Islander (id) {
     // Pending appears to be the next first entry into `_seeking`, one that we
     // biuld while we are waiting for all of the seeking entries to arrive.
     this._pending = []
-    this.log = new Procession
-    this.log.push({ promise: '0/0' })
     // Only pull one message from the outbox at a time.
     this.outbox = new Procession
 }
@@ -28,28 +26,34 @@ Islander.prototype._nextCookie = function () {
     return this._cookie = Monotonic.increment(this._cookie, 0)
 }
 
+// We publish a batch of messages and wait for that batch to pass through
+// consensus before publishing a subsequent batch. While we're waiting for
+// messages to pass through pending messages accumulate in our pending list.
+
+//
 Islander.prototype.publish = function (body) {
     assert(body, 'body cannot be null')
     this._pending.push({ id: this.id, cookie: null, body: body, promise: null })
     this._nudge()
 }
 
+// Possibly publish a batch messages if there are messages available and we're
+// not currently waiting on any to pass through consensus.
+
+//
 Islander.prototype._nudge = function () {
     if (
         this._seeking.messages.length == 0 &&
         this._pending.length != 0
     ) {
         var messages = this._pending.splice(0, this._pending.length)
-        // Assign cookies. If some of the messages are retries, we need to reset
-        // the messages.
+        // Assign cookies. Cookies get reset on retry. We need to reset their
+        // promises to null because some of the messages may be retries.
         messages.forEach(function (message) {
             message.cookie = this._nextCookie()
             message.promise = null
         }, this)
         this._seeking = { cookie: this._cookie, messages: messages }
-        this._seeking.messages.forEach(function (message) {
-            message.promise = null
-        })
         this.outbox.push({
             cookie: this._seeking.cookie,
             messages: JSON.parse(JSON.stringify(this._seeking.messages))
@@ -59,6 +63,11 @@ Islander.prototype._nudge = function () {
 
 // TODO Ensure that `_retry` is not called when we're waiting on a send. Come
 // back and read through the code, add assertions.
+
+// A flush message is a message with a cookie but no body. We send a flush
+// message to resolve race conditions between the waiting on a return value from
+// the submission of messages into the consensus and the arrival of messages
+// about changes in government with associated promise remapping.
 
 //
 Islander.prototype._flush = function () {
@@ -95,7 +104,7 @@ Islander.prototype.sent = function (cookie, receipts) {
 }
 
 // Long diatribe. Initially about race conditions possibly introduced by the
-// process bounardy between the Compassion Colleague and the Conference based
+// process boundary between the Compassion Colleague and the Conference based
 // application that it is running. Doesn't seem likely to me.
 
 // Then a wondering why we don't just track the cookies alone. This trails off
@@ -103,7 +112,7 @@ Islander.prototype.sent = function (cookie, receipts) {
 
 // Possibly there is some confusion about using an outbox when there is only
 // ever one message outbound at a time. It is a single message with an array of
-// accumulated messages to send. A structure like Turnstile.Check seems more
+// accumulated messages to send. A structure like Turnstile. Check seems more
 // appropriate, but it isn't really, because the callback is assigned at
 // construction. Procession indicates you can connect later.
 
@@ -114,9 +123,6 @@ Islander.prototype.push = function (entry) {
 
     // Make note of the previous promise.
     this._previous = entry.promise
-
-    // Whatever it is, we can forward it. This is not a filter nor a transform.
-    this.log.push(entry)
 
     // If we are not waiting on any messages then there is nothing to do.
     if (this._seeking.messages.length == 0) {

@@ -1,11 +1,10 @@
-require('proof')(10, prove)
+require('proof')(8, prove)
 
 function prove (assert) {
     var Islander = require('../islander')
 
     var islander = new Islander('x')
     var outbox = islander.outbox.shifter()
-    var shifter = islander.log.shifter()
     var messages
 
     assert(outbox.shift(), null, 'outbox is empty')
@@ -17,12 +16,6 @@ function prove (assert) {
     assert(outbox.peek(), null, 'outbox is still empty')
 
     islander.push({ body: { id: '2', cookie: '0', body: 1 }, promise: '1/1', previous: '1/0' })
-
-    assert([ shifter.shift(), shifter.shift() ], [{
-        body: {}, promise: '1/0', previous: '0/0'
-    }, {
-        body: { id: '2', cookie: '0', body: 1 }, promise: '1/1', previous: '1/0'
-    }], 'pass through')
 
     islander.publish(1)
     islander.publish(2)
@@ -51,15 +44,5 @@ function prove (assert) {
     islander.sent({ '2': '1/4', '3': '1/5' })
     islander.push({ body: { id: 'x', cookie: '2', body: 2 }, promise: '1/4', previous: '1/3' })
     islander.push({ body: { id: 'x', cookie: '3', body: 3 }, promise: '1/5', previous: '1/4' })
-    assert([ shifter.shift(), shifter.shift(), shifter.shift(), shifter.shift() ], [{
-        body: { id: 'y', cookie: '1', body: 1 }, promise: '1/2', previous: '1/1'
-    }, {
-        body: { id: 'x', cookie: '1', body: 1 }, promise: '1/3', previous: '1/2'
-    }, {
-        body: { id: 'x', cookie: '2', body: 2 }, promise: '1/4', previous: '1/3'
-    }, {
-        body: { id: 'x', cookie: '3', body: 3 }, promise: '1/5', previous: '1/4'
-    }], 'pass through')
-
     assert(islander.health(), { waiting: 0, pending: 0 }, 'consumed')
 }
