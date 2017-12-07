@@ -159,7 +159,8 @@ Islander.prototype.push = function (entry) {
     } else if (this.id == entry.body.id) {
         // Shift a message from our list of awaiting messages if we see it.
         if (entry.body.cookie == this._seeking.messages[0].cookie) {
-            this._seeking.messages.shift()
+            var message = this._seeking.messages.shift()
+            assert(message.promise == null || message.promise == entry.promise, 'promise mismatch')
             // If we've consumed all the messages, maybe sent out another batch.
             if (this._seeking.messages.length == 0) {
                 this._nudge()
