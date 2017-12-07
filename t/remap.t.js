@@ -1,6 +1,6 @@
 require('proof')(6, prove)
 
-function prove (assert) {
+function prove (okay) {
     var Islander = require('../islander')
 
     var islander = new Islander('x')
@@ -10,11 +10,11 @@ function prove (assert) {
     islander.publish(1)
     islander.publish(2)
     islander.publish(3)
-    assert(islander.health(), { waiting: 1, pending: 2 }, 'sent')
+    okay(islander.health(), { waiting: 1, pending: 2 }, 'sent')
 
     envelope = outbox.shift()
-    assert(envelope, 'outbox ready')
-    assert(envelope, {
+    okay(envelope, 'outbox ready')
+    okay(envelope, {
         cookie: '1',
         messages: [{ id: 'x', cookie: '1', body: 1, promise: null }]
     }, 'outbox is not empty')
@@ -24,7 +24,7 @@ function prove (assert) {
     islander.push({ body: { id: 'x', cookie: '1', body: 1 }, promise: '1/1', previous: '1/0' })
 
     envelope = outbox.shift()
-    assert(envelope, {
+    okay(envelope, {
         cookie: '3',
         messages: [{
             id: 'x', cookie: '2', body: 2, promise: null
@@ -43,6 +43,6 @@ function prove (assert) {
         }
     })
     islander.push({ body: { id: 'x', cookie: '3', body: 3 }, promise: '2/1', previous: '2/0' })
-    assert(islander.health(), { waiting: 0, pending: 0 }, 'remapped')
-    assert(islander.health(), { waiting: 0, pending: 0 }, 'consumed')
+    okay(islander.health(), { waiting: 0, pending: 0 }, 'remapped')
+    okay(islander.health(), { waiting: 0, pending: 0 }, 'consumed')
 }
