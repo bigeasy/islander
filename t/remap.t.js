@@ -1,4 +1,4 @@
-require('proof')(6, prove)
+require('proof')(8, prove)
 
 function prove (okay) {
     var Islander = require('../islander')
@@ -13,7 +13,6 @@ function prove (okay) {
     okay(islander.health(), { waiting: 1, pending: 2 }, 'sent')
 
     envelope = outbox.shift()
-    okay(envelope, 'outbox ready')
     okay(envelope, {
         cookie: '1',
         messages: [{ id: 'x', cookie: '1', body: 1, promise: null }]
@@ -45,4 +44,19 @@ function prove (okay) {
     islander.push({ body: { id: 'x', cookie: '3', body: 3 }, promise: '2/1', previous: '2/0' })
     okay(islander.health(), { waiting: 0, pending: 0 }, 'remapped')
     okay(islander.health(), { waiting: 0, pending: 0 }, 'consumed')
+
+    islander.publish(4)
+    envelope = outbox.shift()
+    okay(envelope, {
+        cookie: '4',
+        messages: [{ id: 'x', cookie: '4', body: 4, promise: null }]
+    }, 'outbox for before remap')
+    islander.sent('4', { '4': '3/1' })
+    islander.push({
+        promise: '3/0', previous: '2/1',
+        body: { map: {} }
+    })
+    okay(islander.health(), { waiting: 1, pending: 0 }, 'skip remapped')
+    islander.push({ body: { id: 'x', cookie: '4', body: 4 }, promise: '3/1', previous: '3/0' })
+    okay(islander.health(), { waiting: 0, pending: 0 }, 'skip remapped consumed')
 }

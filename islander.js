@@ -39,6 +39,11 @@ Islander.prototype.publish = function (body) {
 
 // Possibly publish a batch messages if there are messages available and we're
 // not currently waiting on any to pass through consensus.
+//
+// Properties of a submission are that our results will have promises that are
+// all from the same government. We reassign cookies. They are for Islander to
+// track, not for public consumption. If their are retries in the submission,
+// they will get new cookies.
 
 //
 Islander.prototype._nudge = function () {
@@ -141,7 +146,7 @@ Islander.prototype.push = function (entry) {
             // Failed a remap because of a consensus collapse or else we didn't
             // get our receipts in time.
             this._flush()
-        } else {
+        } else if (Monotonic.compare(this._seeking.messages[0].promise, entry.promise) < 0) {
             // Remap.
             this._seeking.messages.forEach(function (message) {
                 message.promise = map[message.promise]
