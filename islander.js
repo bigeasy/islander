@@ -123,6 +123,11 @@ Islander.prototype.sent = function (cookie, receipts) {
 
 //
 Islander.prototype.push = function (entry) {
+    // End-of-stream.
+    if (entry == null) {
+        return
+    }
+
     // User must provide items in order.
     assert(this._previous == entry.previous || this._previous == null, 'out of order')
 
