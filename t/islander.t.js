@@ -45,4 +45,5 @@ function prove (okay) {
     islander.push({ body: { id: 'x', cookie: '2', body: 2 }, promise: '1/4', previous: '1/3' })
     islander.push({ body: { id: 'x', cookie: '3', body: 3 }, promise: '1/5', previous: '1/4' })
     okay(islander.health(), { waiting: 0, pending: 0 }, 'consumed')
+    islander.push(null)
 }
