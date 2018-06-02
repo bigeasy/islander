@@ -30,7 +30,7 @@
     {
                             "cadence":                      "1.0.x",
                             "monotonic":                    "3.0.x",
-                            "procession":                   "0.19.x",
+                            "procession":                   "0.20.x",
                             "prolific.logger":              "6.0.x"
     },
     "devDependencies":
