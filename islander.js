@@ -99,12 +99,12 @@ Islander.prototype.sent = function (cookie, receipts) {
     if (this._seeking.cookie == cookie) {
         if (receipts == null) {
             this._seeking.cookie = null
+            this._flush()
         } else if (!this._seeking.flushing) {
             this._seeking.messages.forEach(function (message) {
                 message.promise = receipts[message.cookie]
             })
         }
-        this._flush()
     }
 }
 
