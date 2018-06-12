@@ -1,4 +1,4 @@
-require('proof')(8, prove)
+require('proof')(7, prove)
 
 function prove (okay) {
     var Islander = require('../islander')
@@ -9,9 +9,7 @@ function prove (okay) {
 
     okay(outbox.shift(), null, 'outbox is empty')
 
-    islander.enqueue({ body: {}, promise: '1/0', previous: '0/0' }, function (error) {
-        okay(!error, 'enqueued')
-    })
+    islander.push({ body: {}, promise: '1/0', previous: '0/0' })
 
     okay(outbox.peek(), null, 'outbox is still empty')
 

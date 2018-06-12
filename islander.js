@@ -15,7 +15,6 @@
 //
 var assert = require('assert')
 var Monotonic = require('monotonic').asString
-var cadence = require('cadence')
 var unshift = [].unshift
 var logger = require('prolific.logger').createLogger('islander')
 var Procession = require('procession')
@@ -206,10 +205,6 @@ Islander.prototype.push = function (entry) {
         }
     }
 }
-
-Islander.prototype.enqueue = cadence(function (async, entry) {
-    this.push(entry)
-})
 
 Islander.prototype.health = function () {
     return {
