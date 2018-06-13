@@ -15,8 +15,6 @@
 //
 var assert = require('assert')
 var Monotonic = require('monotonic').asString
-var unshift = [].unshift
-var logger = require('prolific.logger').createLogger('islander')
 var Procession = require('procession')
 
 function Islander (id) {
@@ -74,7 +72,13 @@ Islander.prototype._nudge = function () {
         this._seeking = { cookie: this._cookie, messages: messages }
         this.outbox.push({
             cookie: this._seeking.cookie,
-            messages: JSON.parse(JSON.stringify(this._seeking.messages))
+            messages: this._seeking.messages.map(function (message) {
+                return {
+                    id: message.id,
+                    cookie: message.cookie,
+                    body: JSON.parse(JSON.stringify(message.body))
+                }
+            })
         })
     }
 }
@@ -156,18 +160,24 @@ Islander.prototype.push = function (entry) {
         var map = entry.body.map
         if (map == null) {
             // Government collapse so all pending messages have been discarded.
+            // We could simply resubmit now anything we're holding that has a
+            // promise assigned. That promise means it's queued and the queued
+            // is empty, but we'd probably just be hammering on a government
+            // trying to hold an election. If we don't hold a promise, we are
+            // waiting on our publish request which might yet succeed, so we
+            // wouldn't want to post. But, still, seems best to flush first as a
+            // means to determine when Paxos has recovered.
             this._flush()
         } else if (this._seeking.flushing) {
             if (this._seeking.promise == null) {
+                // Didn't get our flushing promise so try again.
                 this._flush()
-            } else {
+            } else if (Monotonic.compare(this._seeking.promise, entry.promise) < 0) {
                 // This government entry may procede our request and response so
-                // that the promise we're waiting for in order to flush comes after
-                // the government and is therefore not remapped.
-                if (Monotonic.compare(this._seeking.promise, entry.promise) < 0) {
-                    this._seeking.promise = map[this._seeking.promise]
-                    assert(this._seeking.promise, 'remap did not remap all posted entries')
-                }
+                // that the promise we're waiting for in order to flush comes
+                // after the government and is therefore not remapped.
+                this._seeking.promise = map[this._seeking.promise]
+                assert(this._seeking.promise, 'remap did not remap all posted entries')
             }
         } else if (this._seeking.messages[0].promise != null) {
             // This government entry may procede our request and response so
@@ -199,8 +209,8 @@ Islander.prototype.push = function (entry) {
             }
         } else if (entry.body.cookie == this._seeking.cookie) {
             // We've flushed so it is time to retry.
-            var retries = this._seeking.messages.splice(0, this._seeking.messages.length)
-            Array.prototype.unshift.apply(this._pending, retries)
+            Array.prototype.unshift.apply(this._pending, this._seeking.messages)
+            this._seeking.messages.length = 0
             this._nudge()
         }
     }
