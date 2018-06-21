@@ -24,10 +24,10 @@ function Islander (id) {
     // `_seeking` are sent batches, generally zero or one outstanding messages
     // followed by zero or more flush messages. Confirm and document.
     //
-    // Our structure somelinke like the one in `Sequester`, but not really.
+    // Our structure is something like the one in `Sequester`, but not really.
     this._seeking = { messages: [] }
     // Pending appears to be the next first entry into `_seeking`, one that we
-    // biuld while we are waiting for all of the seeking entries to arrive.
+    // build while we are waiting for all of the seeking entries to arrive.
     this._pending = []
     // Only pull one message from the outbox at a time.
     this.outbox = new Procession
@@ -173,14 +173,14 @@ Islander.prototype.push = function (entry) {
                 // Didn't get our flushing promise so try again.
                 this._flush()
             } else if (Monotonic.compare(this._seeking.promise, entry.promise) < 0) {
-                // This government entry may procede our request and response so
+                // This government entry may proceed our request and response so
                 // that the promise we're waiting for in order to flush comes
                 // after the government and is therefore not remapped.
                 this._seeking.promise = map[this._seeking.promise]
                 assert(this._seeking.promise, 'remap did not remap all posted entries')
             }
         } else if (this._seeking.messages[0].promise != null) {
-            // This government entry may procede our request and response so
+            // This government entry may proceed our request and response so
             // that the first promise we're waiting for comes after the
             // government and is therefore not remapped.
             if (Monotonic.compare(this._seeking.messages[0].promise, entry.promise) < 0) {
