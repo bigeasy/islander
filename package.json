@@ -1,6 +1,6 @@
 {
     "name":                 "islander",
-    "version":              "2.4.3",
+    "version":              "2.5.0",
     "description":
 
       "Data structure for tracking a Multi-Paxos log.",
