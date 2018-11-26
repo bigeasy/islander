@@ -29,7 +29,7 @@
     "dependencies":
     {
                             "monotonic":                    "3.0.x",
-                            "procession":                   "2.6.x"
+                            "procession":                   "2.7.x"
     },
     "devDependencies":
     {
