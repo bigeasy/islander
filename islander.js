@@ -17,7 +17,7 @@ var assert = require('assert')
 var Monotonic = require('monotonic').asString
 var Procession = require('procession')
 
-function Islander (id) {
+function Islander (id, outbox) {
     this.id = id
     this._cookie = '0'
     // TODO What is the structure, how are objects grouped? It appears that
@@ -30,7 +30,7 @@ function Islander (id) {
     // build while we are waiting for all of the seeking entries to arrive.
     this._pending = []
     // Only pull one message from the outbox at a time.
-    this.outbox = new Procession
+    this.outbox = outbox
 }
 
 Islander.prototype._nextCookie = function () {

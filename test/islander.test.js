@@ -3,15 +3,15 @@ describe('islander', () => {
     it('can pass this test', () => {
         var Islander = require('../islander')
 
-        var islander = new Islander('x')
-        var outbox = islander.outbox.shifter()
+        var outbox = []
+        var islander = new Islander('x', outbox)
         var messages
 
         assert.equal(outbox.shift(), null, 'outbox is empty')
 
         islander.push({ body: {}, promise: '1/0', previous: '0/0' })
 
-        assert.equal(outbox.peek(), null, 'outbox is still empty')
+        assert.equal(outbox.length, 0, 'outbox is still empty')
 
         islander.push({ body: { id: '2', cookie: '0', body: 1 }, promise: '1/1', previous: '1/0' })
 
