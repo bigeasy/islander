@@ -15,7 +15,6 @@
 //
 var assert = require('assert')
 var Monotonic = require('monotonic').asString
-var Procession = require('procession')
 
 function Islander (id, outbox) {
     this.id = id
