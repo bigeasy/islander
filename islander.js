@@ -13,8 +13,8 @@
 // algorithms are working together properly. We're asserting that Paxos is
 // remapping completely and correctly.
 //
-var assert = require('assert')
-var Monotonic = require('monotonic').asString
+const assert = require('assert')
+const Monotonic = require('monotonic').asString
 
 class Islander {
     constructor (id, outbox) {
@@ -62,7 +62,7 @@ class Islander {
             this._seeking.messages.length == 0 &&
             this._pending.length != 0
         ) {
-            var messages = this._pending.splice(0, this._pending.length)
+            const messages = this._pending.splice(0, this._pending.length)
             // Assign cookies. Cookies get reset on retry. We need to reset their
             // promises to null because some of the messages may be retries.
             messages.forEach(function (message) {
@@ -157,7 +157,7 @@ class Islander {
 
         // Take note of a new government.
         if (Monotonic.isBoundary(entry.promise, 0)) {
-            var map = entry.body.map
+            const map = entry.body.map
             if (map == null) {
                 // Government collapse so all pending messages have been discarded.
                 // We could simply resubmit now anything we're holding that has a
@@ -201,7 +201,7 @@ class Islander {
         } else if (this.id == entry.body.id) {
             // Shift a message from our list of awaiting messages if we see it.
             if (entry.body.cookie == this._seeking.messages[0].cookie) {
-                var message = this._seeking.messages.shift()
+                const message = this._seeking.messages.shift()
                 assert(message.promise == null || message.promise == entry.promise, 'promise mismatch')
                 // If we've consumed all the messages, maybe sent out another batch.
                 if (this._seeking.messages.length == 0) {

@@ -1,11 +1,11 @@
 describe('islander', () => {
     const assert = require('assert')
     it('can pass this test', () => {
-        var Islander = require('../islander')
+        const Islander = require('../islander')
 
-        var outbox = []
-        var islander = new Islander('x', outbox)
-        var messages
+        const outbox = []
+        const islander = new Islander('x', outbox)
+        let messages
 
         assert.equal(outbox.shift(), null, 'outbox is empty')
 
