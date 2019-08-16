@@ -65,14 +65,14 @@ class Islander {
             const messages = this._pending.splice(0, this._pending.length)
             // Assign cookies. Cookies get reset on retry. We need to reset their
             // promises to null because some of the messages may be retries.
-            messages.forEach(function (message) {
+            for (const message of messages) {
                 message.cookie = this._nextCookie()
                 message.promise = null
-            }, this)
+            }
             this._seeking = { cookie: this._cookie, messages: messages }
             this.outbox.push({
                 cookie: this._seeking.cookie,
-                messages: this._seeking.messages.map(function (message) {
+                messages: this._seeking.messages.map((message) => {
                     return {
                         id: message.id,
                         cookie: message.cookie,
@@ -117,9 +117,9 @@ class Islander {
             } else if (this._seeking.flushing) {
                 this._seeking.promise = receipts[this._seeking.cookie]
             } else {
-                this._seeking.messages.forEach(function (message) {
+                for (const message of this._seeking.messages) {
                     message.promise = receipts[message.cookie]
-                })
+                }
             }
         }
     }
@@ -185,9 +185,9 @@ class Islander {
                 // government and is therefore not remapped.
                 if (Monotonic.compare(this._seeking.messages[0].promise, entry.promise) < 0) {
                     // Remap.
-                    this._seeking.messages.forEach(function (message) {
+                    for (const message of this._seeking.messages) {
                         message.promise = map[message.promise]
-                    })
+                    }
                     assert(this._seeking.messages.reduce(function (remapped, message) {
                         return remapped && message.promise != null
                     }, true), 'remap did not remap all posted entries')
