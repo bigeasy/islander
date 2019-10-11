@@ -14,7 +14,7 @@
 // remapping completely and correctly.
 //
 const assert = require('assert')
-const Monotonic = require('monotonic').asString
+const Paxos = require('paxos')
 
 class Islander {
     constructor (id, outbox) {
@@ -34,7 +34,7 @@ class Islander {
     }
 
     _nextCookie () {
-        return this._cookie = Monotonic.increment(this._cookie, 0)
+        return this._cookie = Paxos.increment(this._cookie, 0)
     }
 
     // We publish a batch of messages and wait for that batch to pass through
@@ -156,7 +156,7 @@ class Islander {
         }
 
         // Take note of a new government.
-        if (Monotonic.isBoundary(entry.promise, 0)) {
+        if (Paxos.isGovernment(entry.promise)) {
             const map = entry.body.map
             if (map == null) {
                 // Government collapse so all pending messages have been discarded.
@@ -172,7 +172,7 @@ class Islander {
                 if (this._seeking.promise == null) {
                     // Didn't get our flushing promise so try again.
                     this._flush()
-                } else if (Monotonic.compare(this._seeking.promise, entry.promise) < 0) {
+                } else if (Paxos.compare(this._seeking.promise, entry.promise) < 0) {
                     // This government entry may proceed our request and response so
                     // that the promise we're waiting for in order to flush comes
                     // after the government and is therefore not remapped.
@@ -183,7 +183,7 @@ class Islander {
                 // This government entry may proceed our request and response so
                 // that the first promise we're waiting for comes after the
                 // government and is therefore not remapped.
-                if (Monotonic.compare(this._seeking.messages[0].promise, entry.promise) < 0) {
+                if (Paxos.compare(this._seeking.messages[0].promise, entry.promise) < 0) {
                     // Remap.
                     for (const message of this._seeking.messages) {
                         message.promise = map[message.promise]

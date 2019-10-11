@@ -28,7 +28,7 @@
     },
     "dependencies":
     {
-                            "monotonic":                    "3.0.x"
+                            "paxos":                        "^19.0.0-alpha.3"
     },
     "devDependencies":
     {
