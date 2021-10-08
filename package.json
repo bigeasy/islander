@@ -1,6 +1,6 @@
 {
     "name":                 "islander",
-    "version":              "5.0.0-alpha.8",
+    "version":              "5.0.0-alpha.9",
     "description":
 
       "Data structure for tracking a Multi-Paxos log.",
