@@ -147,44 +147,44 @@ require('proof')(18, (okay) => {
 
     islander.publish(7)
     okay(outbox.shift(), {
-        cookie: 'a',
-        messages: [{ id: 'x', cookie: 'a', body: 7 }]
+        cookie: '10',
+        messages: [{ id: 'x', cookie: '10', body: 7 }]
     }, 'publish and skip remapping messages')
-    islander.sent('a', { 'a': '8/1' })
+    islander.sent('10', { '10': '8/1' })
     islander.push({
         promise: '8/0', previous: '7/1',
         body: { map: {} }
     })
     islander.push({
         promise: '8/1', previous: '8/0',
-        body: { id: 'x', cookie:  'a' }
+        body: { id: 'x', cookie:  '10' }
     })
 
     okay(islander.health(), { waiting: 0, pending: 0 }, 'publish and skip remapping messages consumed')
 
     islander.publish(8)
     okay(outbox.shift(), {
-        cookie: 'b',
-        messages: [{ id: 'x', cookie: 'b', body: 8 }]
+        cookie: '11',
+        messages: [{ id: 'x', cookie: '11', body: 8 }]
     }, 'publish failure')
-    islander.sent('b', null)
+    islander.sent('11', null)
     okay(outbox.shift(), {
-        cookie: 'c',
-        messages: [{ id: 'x', cookie: 'c', body: null }]
+        cookie: '12',
+        messages: [{ id: 'x', cookie: '12', body: null }]
     }, 'publish failure flush')
-    islander.sent('c', { 'c': '8/2' })
+    islander.sent('12', { '12': '8/2' })
     islander.push({
         promise: '8/2', previous: '8/1',
-        body: { id: 'x', cookie:  'c' }
+        body: { id: 'x', cookie:  '12' }
     })
     okay(outbox.shift(), {
-        cookie: 'd',
-        messages: [{ id: 'x', cookie: 'd', body: 8 }]
+        cookie: '13',
+        messages: [{ id: 'x', cookie: '13', body: 8 }]
     }, 'publish failure resend')
-    islander.sent('d', { 'd': '8/3' })
+    islander.sent('13', { '13': '8/3' })
     islander.push({
         promise: '8/3', previous: '8/2',
-        body: { id: 'x', cookie:  'd' }
+        body: { id: 'x', cookie:  '13' }
     })
 
     okay(islander.health(), { waiting: 0, pending: 0 }, 'done')

@@ -28,7 +28,7 @@
     },
     "dependencies":
     {
-                            "paxos":                        "19.0.0-alpha.12"
+                            "paxos":                        "19.0.0-alpha.15"
     },
     "devDependencies":
     {
